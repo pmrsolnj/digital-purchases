@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Digital Purchases — Kanban Board</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f1117;
+    min-height: 100vh;
+    color: #e2e8f0;
+  }
+  header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  header h1 { font-size: 1.3rem; font-weight: 700; }
+  header p { font-size: 0.8rem; opacity: 0.85; margin-top: 2px; }
+  .stats {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .stat {
+    background: rgba(255,255,255,0.2);
+    border-radius: 8px;
+    padding: 6px 12px;
+    text-align: center;
+  }
+  .stat-num { font-size: 1.2rem; font-weight: 700; }
+  .stat-label { font-size: 0.65rem; opacity: 0.85; }
+
+  .search-bar {
+    padding: 12px 24px;
+    background: #1a1d27;
+    border-bottom: 1px solid #2d3148;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .search-bar input {
+    flex: 1;
+    min-width: 200px;
+    padding: 8px 14px;
+    border: 1px solid #2d3148;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    outline: none;
+    background: #0f1117;
+    color: #e2e8f0;
+  }
+  .search-bar input::placeholder { color: #4a5568; }
+  .search-bar input:focus { border-color: #667eea; }
+  .filter-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .filter-btn {
+    padding: 5px 12px;
+    border: 1px solid #2d3148;
+    border-radius: 20px;
+    background: #1a1d27;
+    color: #a0aec0;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .filter-btn.active, .filter-btn:hover {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+  }
+
+  .board {
+    display: flex;
+    gap: 16px;
+    padding: 20px 24px;
+    overflow-x: auto;
+    align-items: flex-start;
+    min-height: calc(100vh - 160px);
+  }
+
+  .column {
+    min-width: 270px;
+    max-width: 290px;
+    background: #1a1d27;
+    border-radius: 12px;
+    padding: 12px;
+    flex-shrink: 0;
+  }
+  .col-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 0 4px;
+  }
+  .col-icon { font-size: 1.2rem; }
+  .col-title { font-weight: 700; font-size: 0.9rem; flex: 1; }
+  .col-count {
+    background: rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #a0aec0;
+  }
+
+  .card {
+    background: #252836;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    cursor: pointer;
+    transition: all 0.2s;
+    border-left: 4px solid transparent;
+    position: relative;
+  }
+  .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.4); transform: translateY(-1px); }
+  .card.courses { border-left-color: #667eea; }
+  .card.memberships { border-left-color: #f59e0b; }
+  .card.etsy { border-left-color: #f97316; }
+  .card.ebooks { border-left-color: #10b981; }
+  .card.tools { border-left-color: #06b6d4; }
+  .card.other { border-left-color: #8b5cf6; }
+
+  .card-title { font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; line-height: 1.3; }
+  .card-meta { font-size: 0.72rem; color: #718096; margin-bottom: 6px; }
+  .card-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px; }
+  .tag {
+    font-size: 0.65rem;
+    padding: 2px 7px;
+    border-radius: 10px;
+    background: #2d3148;
+    color: #a0aec0;
+  }
+  .tag.gmail { background: #3d3416; color: #f6c642; }
+  .tag.outlook { background: #1a2744; color: #63a1f0; }
+  .tag.active { background: #143328; color: #48bb78; }
+  .tag.pending { background: #3d3012; color: #ecc94b; }
+  .tag.expired { background: #3d1414; color: #fc8181; }
+
+  .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+  }
+  .card-source { font-size: 0.68rem; color: #4a5568; }
+  .card-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+  }
+  .card-status-dot.unknown { background: #f59e0b; }
+
+  .add-card-btn {
+    width: 100%;
+    padding: 8px;
+    border: 2px dashed #2d3148;
+    border-radius: 8px;
+    background: transparent;
+    color: #4a5568;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 4px;
+  }
+  .add-card-btn:hover { border-color: #667eea; color: #667eea; background: rgba(102,126,234,0.08); }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #1a1d27;
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 480px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    border: 1px solid #2d3148;
+  }
+  .modal h2 { font-size: 1.1rem; margin-bottom: 16px; color: #e2e8f0; }
+  .modal label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; color: #a0aec0; }
+  .modal input, .modal select, .modal textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #2d3148;
+    border-radius: 8px;
+    background: #0f1117;
+    color: #e2e8f0;
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+    outline: none;
+    font-family: inherit;
+  }
+  .modal input:focus, .modal select:focus, .modal textarea:focus { border-color: #667eea; }
+  .modal textarea { min-height: 60px; resize: vertical; }
+  .modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+  .btn { padding: 8px 18px; border-radius: 8px; border: none; font-size: 0.85rem; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+  .btn-primary { background: #667eea; color: white; }
+  .btn-primary:hover { background: #5a6fd6; }
+  .btn-secondary { background: #f0f0f0; color: #555; }
+  .btn-secondary:hover { background: #e0e0e0; }
+  .btn-danger { background: #fee2e2; color: #991b1b; }
+  .btn-danger:hover { background: #fecaca; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>📦 My Digital Purchases</h1>
+    <p>Scanned from Gmail & Outlook · Last updated Oct 31, 2026 · 170 items</p>
+  </div>
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-num" id="total-count">0</div>
+      <div class="stat-label">Total Items</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="col-count">6</div>
+      <div class="stat-label">Categories</div>
+    </div>
+  </div>
+</header>
+
+<div class="search-bar">
+  <input type="text" id="search-input" placeholder="🔍 Search purchases..." oninput="filterCards()">
+  <div class="filter-btns">
+    <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+    <button class="filter-btn" onclick="setFilter('gmail', this)">Gmail</button>
+    <button class="filter-btn" onclick="setFilter('outlook', this)">Outlook</button>
+    <button class="filter-btn" onclick="setFilter('active', this)">Active</button>
+  </div>
+</div>
+
+<div class="board" id="board"></div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h2 id="modal-title">Add Purchase</h2>
+    <label>Name / Title</label>
+    <input type="text" id="f-name" placeholder="e.g. The 90 Day Rebrand">
+    <label>Platform / Source</label>
+    <input type="text" id="f-platform" placeholder="e.g. Stan Store, Teachable, Etsy">
+    <label>Category</label>
+    <select id="f-category">
+      <option value="courses">🎓 Courses</option>
+      <option value="memberships">👥 Memberships</option>
+      <option value="etsy">🛒 Etsy Downloads</option>
+      <option value="ebooks">📚 eBooks & PDFs</option>
+      <option value="tools">🛠️ Tools & Software</option>
+      <option value="other">🗂️ Other</option>
+    </select>
+    <label>Email Account</label>
+    <select id="f-account">
+      <option value="gmail">Gmail (pamreina70 / pambraue)</option>
+      <option value="outlook">Outlook (pmrsolutionsnj)</option>
+    </select>
+    <label>Status</label>
+    <select id="f-status">
+      <option value="active">Active</option>
+      <option value="pending">Not Started</option>
+      <option value="expired">Expired / Unknown</option>
+    </select>
+    <label>Login URL (optional)</label>
+    <input type="text" id="f-url" placeholder="https://...">
+    <label>Notes (optional)</label>
+    <textarea id="f-notes" placeholder="Login email, access code, notes..."></textarea>
+    <div class="modal-btns">
+      <button class="btn btn-danger hidden" id="btn-delete" onclick="deleteCard()">Delete</button>
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCard()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLUMNS = [
+  { id: 'courses',     label: 'Courses',        icon: '🎓', color: '#667eea' },
+  { id: 'memberships', label: 'Memberships',     icon: '👥', color: '#f59e0b' },
+  { id: 'etsy',        label: 'Etsy Downloads',  icon: '🛒', color: '#f97316' },
+  { id: 'ebooks',      label: 'eBooks & PDFs',   icon: '📚', color: '#10b981' },
+  { id: 'tools',       label: 'Tools & Software',icon: '🛠️', color: '#06b6d4' },
+  { id: 'other',       label: 'Other',           icon: '🗂️', color: '#8b5cf6' },
+];
+
+const INITIAL_CARDS = [
+  // COURSES
+  { id: 1, title: 'The 90 Day Rebrand', platform: 'Stan Store', category: 'courses', account: 'gmail', status: 'active', url: '', notes: 'Receipt from orders@stan.store' },
+  { id: 2, title: 'Business Plan Of Action', platform: 'SamCart / BPOA', category: 'courses', account: 'outlook', status: 'active', url: 'https://bpoa.samcart.com', notes: 'Welcome email received Sep 28, 2026. Login via SamCart.' },
+  { id: 3, title: 'Island Cloud Download', platform: 'IslandCloud', category: 'courses', account: 'gmail', status: 'pending', url: '', notes: 'Multiple download emails from no-reply@emails.islandcloud.co' },
+  { id: 4, title: 'Digital Purchase (EDP)', platform: 'EDP CDN', category: 'courses', account: 'gmail', status: 'pending', url: '', notes: 'Download emails from no-reply@edp-cdn.net — identify what was purchased' },
+  // MEMBERSHIPS
+  { id: 5, title: 'Hot Wheels Red Line Club', platform: 'Mattel', category: 'memberships', account: 'outlook', status: 'active', url: 'https://mattelcreations.com', notes: 'Active membership. Multiple car orders confirmed (Pontiac J2000, Nissan Skyline GT-R, etc.)' },
+  { id: 6, title: 'National Notary Association', platform: 'NNA', category: 'memberships', account: 'outlook', status: 'active', url: 'https://nationalnotary.org', notes: 'Registered Oct 14, 2026. Tracks commission & membership dates.' },
+  { id: 7, title: 'Claude Pro', platform: 'Anthropic', category: 'tools', account: 'outlook', status: 'active', url: 'https://claude.ai', notes: '$20/mo — Oct 27–Nov 27, 2026 billing period.' },
+  // ETSY DOWNLOADS
+  { id: 8,  title: 'VisioningChrisCo',     platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3984653509' },
+  { id: 9,  title: 'Colorheal',            platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #4013388786' },
+  { id: 10, title: 'RachyTreasures (x2)',  platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Orders #3983769423 & #3922180543' },
+  { id: 11, title: 'TheLeaderToolkit',     platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3922689035' },
+  { id: 12, title: 'PrintMagicStudioX',   platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3912939412' },
+  { id: 13, title: 'paperbien',            platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3983769405' },
+  { id: 14, title: 'LandOfPrintables',    platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3913414198' },
+  { id: 15, title: 'ClarityPlanr',        platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3922180535' },
+  { id: 16, title: 'DigitizedPlanner',    platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3620635901' },
+  { id: 17, title: 'DigitalTreasuresDen', platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3613479584' },
+  { id: 18, title: 'thepeachpage',        platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3613479592' },
+  { id: 19, title: 'reScrible',           platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3922180537' },
+  { id: 20, title: 'PremierPLR',          platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3912939398 — PLR content' },
+  { id: 21, title: 'DayDivision',         platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3912939384' },
+  { id: 22, title: 'MasterMakerForge',    platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3981614780' },
+  { id: 23, title: 'HREducationEdge',     platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3922689033 — HR education materials' },
+  { id: 24, title: 'phenixdigital',       platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3983769421' },
+  { id: 25, title: 'SerenatasJourney',    platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3980634040' },
+  { id: 26, title: 'MrsNeat',            platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3984653531' },
+  { id: 27, title: 'PlannersAndTheLike', platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3983769415' },
+  { id: 28, title: 'ThePrintablePlans',  platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3984653519' },
+  { id: 29, title: 'HiddenWonderBooks',  platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #4015916387' },
+  { id: 30, title: 'ADAMFLEXA0',         platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #4015916383' },
+  { id: 31, title: 'AngiesPrints',       platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3478823666 (older purchase)' },
+  { id: 32, title: 'EnCDesignsCA',       platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3247482941 (older purchase)' },
+  { id: 33, title: 'ProBizTemplates',    platform: 'Etsy', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Order #3247482945 (older purchase)' },
+  // EBOOKS
+  { id: 34, title: 'Bible Study Bundle',        platform: 'ClickBank', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'Order #ZJ27ZNLE via ClickBank' },
+  { id: 35, title: '365 Day Bible Reading Plan', platform: 'ClickBank', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'Order #ZJ27ZJQE via ClickBank' },
+  { id: 36, title: 'TheBestDigitalBooks',       platform: 'Etsy', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'Order #3617647163' },
+  { id: 37, title: 'Bookshop.org Order',        platform: 'Bookshop.org', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'Order R545258954 — physical/digital book' },
+  { id: 38, title: 'Kylie Morton — Digital',    platform: 'Direct', category: 'ebooks', account: 'gmail', status: 'pending', url: '', notes: 'Receipt from kylie@kyliemorton.com — identify what was purchased' },
+  // COURSES (Outlook scan batch 2)
+  { id: 41, title: 'School of Bookkeeping', platform: 'Kajabi / schoolofbookkeeping.com', category: 'courses', account: 'outlook', status: 'active', url: 'https://schoolofbookkeeping.com', notes: 'Active Kajabi membership. Workshop Wednesdays recordings included. Email: schoolofbookkeeping@t.kajabimail.com' },
+  { id: 42, title: 'IRS Nationwide Tax Forum 2026', platform: 'IRS / irstaxforum.com', category: 'courses', account: 'outlook', status: 'pending', url: 'https://www.irstaxforum.com', notes: 'Early bird registration email Jun 5, 2026. Verify if paid registration was completed.' },
+  { id: 43, title: 'Value Pricing Academy', platform: 'Mark Wickersham / valuepricingacademy.com', category: 'courses', account: 'outlook', status: 'pending', url: 'https://valuepricingacademy.com', notes: 'AI training for accountants from support@valuepricingacademy.com — verify if paid membership.' },
+  // MEMBERSHIPS (Outlook scan batch 2)
+  { id: 44, title: 'AAA Membership', platform: 'AAA / ACA', category: 'memberships', account: 'outlook', status: 'active', url: 'https://aaa.com', notes: 'Annual auto-renewal. Dues charged 11/01/2026 to card on file. From AAABillingnotification@aca-aaa.com' },
+  { id: 45, title: 'The Coaching Tools Company', platform: 'thecoachingtoolscompany.com', category: 'memberships', account: 'outlook', status: 'active', url: 'https://www.thecoachingtoolscompany.com', notes: 'Community membership with forum and events. From team@comm.thecoachingtoolscompany.com' },
+  // TOOLS (Outlook scan batch 2)
+  { id: 46, title: 'Double', platform: 'Double / Stripe', category: 'tools', account: 'outlook', status: 'expired', url: '', notes: '$50/mo subscription via Stripe — payment FAILING as of Sep 28, 2026. Contact: failed-payments+acct_1GTtNBBp8zgC45Qn@stripe.com' },
+  { id: 47, title: 'Avalara', platform: 'Avalara (sales tax software)', category: 'tools', account: 'outlook', status: 'active', url: 'https://www.avalara.com', notes: 'Sales tax compliance software. Auto-renewed contract Jul 2026. Contacts: Keegan Sykes (keegan.sykes@avalara.com), John Blair (john.blair@avalara.com)' },
+  // TOOLS (Outlook scan batch 3 — Intuit + business tools)
+  { id: 48, title: 'QuickBooks ProAdvisor Program', platform: 'Intuit / intuit.com', category: 'tools', account: 'outlook', status: 'expired', url: 'https://quickbooks.intuit.com/accountants/proadvisor/', notes: '$849 order Jul 29, 2022 (Order #2000027401693). Cancelled Aug 2023 per email from Intuit. ProAdvisor membership — may have resubscribed; verify current status.' },
+  { id: 49, title: 'ProConnect Tax (Intuit)', platform: 'Intuit ProConnect', category: 'tools', account: 'outlook', status: 'active', url: 'https://proconnect.intuit.com', notes: 'Orders: $299 (Order #400414391549111, Feb 2022) + $29.90 (Order #300010562816, Mar 2022). Tax preparation software for professionals. Verify if still active.' },
+  { id: 50, title: 'Proposify', platform: 'Proposify / proposify.com', category: 'tools', account: 'outlook', status: 'expired', url: 'https://www.proposify.com', notes: 'Subscription started Sep 9, 2022 — $147 / 3 months. Proposal software. Replaced Practice Ignition. Verify if still active.' },
+  { id: 51, title: 'Practice Ignition', platform: 'Ignition (practice ignition)', category: 'tools', account: 'outlook', status: 'expired', url: 'https://www.ignitionapp.com', notes: 'Previously used for proposals and client payments. Moved away from it ~Mar 2023. Verify if fully cancelled.' },
+  { id: 52, title: 'D&B CreditSignal', platform: 'Dun & Bradstreet', category: 'tools', account: 'outlook', status: 'active', url: 'https://www.dandb.com/creditsignal/', notes: 'Free business credit monitoring. Account: pam@pmrsolutionsnj.com. PMR Solutions LLC D-U-N-S: 054128878. Active since Dec 2021.' },
+  // COURSES (Outlook scan batch 3)
+  { id: 53, title: 'Intuit Academy', platform: 'Intuit / intuit.com', category: 'courses', account: 'outlook', status: 'active', url: 'https://www.intuit.com/training/', notes: 'Study guide shared among ProAdvisor group Jul 2022. Intuit Academy offers free and paid certifications for bookkeepers/accountants.' },
+  // MEMBERSHIPS (Outlook scan batch 3)
+  { id: 54, title: 'CorpNet White Label Reseller', platform: 'CorpNet / corpnet.com', category: 'memberships', account: 'outlook', status: 'pending', url: 'https://www.corpnet.com', notes: 'Partner/reseller program approved Jun 1, 2022. Contact: Sierra Watts (swatts@corpnet.com). Verify if still active and being used.' },
+  // pambraue@gmail.com — Etsy downloads
+  { id: 55, title: 'Etsy — Plannerscollective',    platform: 'Etsy (pambraue)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #1993536050 (pambraue@gmail.com)' },
+  { id: 56, title: 'Etsy — brandisheparddesign', platform: 'Etsy (pambraue)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #1892800084 (pambraue@gmail.com)' },
+  { id: 57, title: 'Etsy — DigiWellnessPlanners', platform: 'Etsy (pambraue)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #1900943051 (pambraue@gmail.com)' },
+  // pambraue@gmail.com — Apps & Memberships
+  { id: 58, title: 'FitCoach', platform: 'FitCoach (fit-coach.io)', category: 'memberships', account: 'gmail', status: 'active', url: 'https://fit-coach.io', notes: 'Fitness coaching app subscription. Receipts from no-reply@fit-coach.io (pambraue@gmail.com). Verify if still active.' },
+  { id: 59, title: 'Lasta App', platform: 'Lasta (lasta.app)', category: 'memberships', account: 'gmail', status: 'expired', url: 'https://lasta.app', notes: 'Intermittent fasting / wellness app. Purchased then cancelled auto-renewal. Expired.' },
+  { id: 60, title: 'Six Flags Membership', platform: 'Six Flags', category: 'memberships', account: 'gmail', status: 'expired', url: 'https://sixflags.com', notes: 'Six Flags season membership — went past due / delinquent. Likely cancelled (pambraue@gmail.com).' },
+  // pambraue@gmail.com — subscriptions found in billing scan
+  { id: 61, title: 'Google One (100 GB)', platform: 'Google One', category: 'memberships', account: 'gmail', status: 'active', url: 'https://one.google.com', notes: '$1.99/mo — 100 GB cloud storage. Started Nov 2019, recurring monthly. Subscription tied to pambraue@gmail.com.' },
+  { id: 62, title: 'Microsoft Office 365 Home', platform: 'Microsoft / billing@microsoft.com', category: 'tools', account: 'gmail', status: 'active', url: 'https://microsoft365.com', notes: 'Annual auto-renewal subscription on pambraue@gmail.com. Multiple renewal notices found going back several years. Verify current renewal date.' },
+  { id: 63, title: 'Sezzle Premium', platform: 'Sezzle (notifications@sezzle.com)', category: 'memberships', account: 'gmail', status: 'active', url: 'https://sezzle.com', notes: 'Buy-now-pay-later premium membership. Started 12/13/2025 (pambraue@gmail.com). Verify monthly fee and if still in use.' },
+  // pamreina70@gmail.com — NEW FINDS (scan Oct 2026, back to 2024)
+  { id: 64, title: 'AI Home Manager System', platform: 'SamCart / Home Organize Tribe', category: 'courses', account: 'gmail', status: 'active', url: '', notes: '$147 purchase Aug 7, 2026. From Home Organize Tribe via SamCart (pamreina70@gmail.com).' },
+  { id: 65, title: 'WeightWatchers (WW)', platform: 'WW / weightwatchers.com', category: 'memberships', account: 'gmail', status: 'active', url: 'https://www.weightwatchers.com', notes: '10-month plan at $10/mo. Started Jan 8, 2025 (pamreina70@gmail.com). Verify if still active.' },
+  { id: 66, title: 'Blink Subscription Plus', platform: 'Amazon / Blink', category: 'memberships', account: 'gmail', status: 'active', url: 'https://blinkforhome.com', notes: 'Cloud video recording for Blink security cameras. Started Aug 29, 2024 (pamreina70@gmail.com). Verify current plan.' },
+  { id: 67, title: 'SiriusXM Music & Entertainment', platform: 'SiriusXM', category: 'memberships', account: 'gmail', status: 'pending', url: 'https://www.siriusxm.com', notes: '~$27.71/mo activated Jun 12, 2026. Husband's account (MRCONCRETE11@GMAIL.COM) — receipt delivered to pamreina70@gmail.com.' },
+  { id: 68, title: 'Kobo — Rich As F*ck', platform: 'Kobo / kobo.com', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://www.kobo.com', notes: '"Rich As F*ck" by Amanda Frances. $7.45 purchase Dec 19, 2025 (pamreina70@gmail.com).' },
+  // pamreina70@gmail.com — Etsy digital downloads (new batch, Oct 2026 scan)
+  { id: 69,  title: 'Etsy — Colorheal',           platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #4013388786' },
+  { id: 70,  title: 'Etsy — DigitizedPlanner',     platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3620635901' },
+  { id: 71,  title: 'Etsy — VisioningChrisCo',     platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3984653509' },
+  { id: 72,  title: 'Etsy — thepeachpage',         platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3613479592' },
+  { id: 73,  title: 'Etsy — paperbien',            platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3983769405' },
+  { id: 74,  title: 'Etsy — RachyTreasures',       platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital downloads — orders #3983769423 + #3922180543' },
+  { id: 75,  title: 'Etsy — ADAMFLEXA0',           platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #4015916383' },
+  { id: 76,  title: 'Etsy — reScrible',            platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3922180537' },
+  { id: 77,  title: 'Etsy — TheLeaderToolkit',     platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3922689035' },
+  { id: 78,  title: 'Etsy — PrintMagicStudioX',   platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3912939412' },
+  { id: 79,  title: 'Etsy — ClarityPlanr',         platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3922180535' },
+  { id: 80,  title: 'Etsy — DigitalTreasuresDen', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3613479584' },
+  { id: 81,  title: 'Etsy — DayDivision',          platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3912939384' },
+  { id: 82,  title: 'Etsy — HiddenWonderBooks',   platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #4015916387' },
+  { id: 83,  title: 'Etsy — PremierPLR',           platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3912939398' },
+  { id: 84,  title: 'Etsy — LandOfPrintables',    platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3913414198' },
+  { id: 85,  title: 'Etsy — OnlineCEO',            platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3177745982' },
+  { id: 86,  title: 'Etsy — phenixdigital',        platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3983769421' },
+  { id: 87,  title: 'Etsy — MrsNeat',              platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3984653531' },
+  { id: 88,  title: 'Etsy — Digicarft',            platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3980634046' },
+  { id: 89,  title: 'Etsy — CraftifyDigitalSol',  platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3981614792' },
+  { id: 90,  title: 'Etsy — LiliesDaily',          platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3984653543' },
+  { id: 91,  title: 'Etsy — MasterMakerForge',    platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3981614780' },
+  { id: 92,  title: 'Etsy — PlannersAndTheLike',  platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital downloads — orders #3983769415 + #3401058913' },
+  { id: 93,  title: 'Etsy — EnCDesignsCA',         platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3247482941' },
+  { id: 94,  title: 'Etsy — ChiconDigital',        platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3169409607' },
+  { id: 95,  title: 'Etsy — ShushkaShop',          platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3395894833' },
+  { id: 96,  title: 'Etsy — EvoPrintables',        platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3160986503' },
+  { id: 97,  title: 'Etsy — ThePrintablePlans',   platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3984653519' },
+  { id: 98,  title: 'Etsy — SnazzyPixels',         platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3981614808' },
+  { id: 99,  title: 'Etsy — MeekoNeko',            platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3395894835' },
+  { id: 100, title: 'Etsy — DiArtLine',            platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3395894837' },
+  { id: 101, title: 'Etsy — typemaven',            platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3392283761' },
+  { id: 102, title: 'Etsy — ReviveWorking',        platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3248612639' },
+  { id: 103, title: 'Etsy — AngiesPrints',         platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3478823666' },
+  { id: 104, title: 'Etsy — ByBohoLove',           platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3401291556' },
+  { id: 105, title: 'Etsy — ScrapbookPlanning',    platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3177745998' },
+  { id: 106, title: 'Etsy — BlueChipTemplates',   platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3357822424' },
+  { id: 107, title: 'Etsy — ColoringPagesOnline', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3177745988' },
+  { id: 108, title: 'Etsy — InnerStoryPlanners',  platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3357822430' },
+  { id: 109, title: 'Etsy — ProBizTemplates',      platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital downloads — orders #3247482945 + #3248612629' },
+  { id: 110, title: 'Etsy — SimplifiedEllc',       platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3344366435' },
+  { id: 111, title: 'Etsy — EsaGreyDesign',        platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3401291550' },
+  { id: 112, title: 'HREducationEdge (Etsy) — Supervisor Planner: Daily Schedule, Meeting & KPI Tracker', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $5.00 paid. VISA-8752. Etsy Order #3922689033. 1 PDF + 1 other file. Part of $19.98 multi-shop cart.' },
+  { id: 113, title: 'Etsy — SerenatasJourney',     platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3980634040' },
+  { id: 114, title: 'Etsy — 2891Design',           platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3286003715' },
+  { id: 115, title: 'Etsy — MollyMoDesign',        platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3478823660' },
+  { id: 116, title: 'Etsy — Funkyday',             platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3401086697' },
+  { id: 117, title: 'Etsy — WriteItDownBooks',     platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3401218206' },
+  { id: 118, title: 'Etsy — ExcelstoreByHarjit',  platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3350859009' },
+  { id: 119, title: 'Etsy — ProductWhistles',      platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3350859007' },
+  { id: 120, title: 'Etsy — CognitiveCounseling', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3290700652' },
+  { id: 121, title: 'Etsy — HappyPrintsByKath',   platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3286003721' },
+  { id: 122, title: 'Etsy — SmallBusinessSarah',  platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'Digital download — order #3182883443' },
+  // OTHER
+  { id: 39, title: 'Plenly Order',       platform: 'Plenly',    category: 'other', account: 'gmail', status: 'pending', url: '', notes: 'Order #1273810 — identify what this is' },
+  { id: 40, title: 'Shophelp.org Order', platform: 'Shophelp',  category: 'other', account: 'gmail', status: 'pending', url: '', notes: 'Order #22200-24004 — identify what this is' },
+  // PMR SOLUTIONS (pmrsolutionsnj@gmail.com) — COURSES
+  { id: 200, title: 'Maria Wendt — Social Media Jumbo Kit', platform: 'Kajabi (mariawendt.com)', category: 'courses', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — purchased Jun 9, 2024. Access via Kajabi.' },
+  { id: 201, title: 'Maria Wendt — 24 Courses for $24',     platform: 'Kajabi (mariawendt.com)', category: 'courses', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — purchased Jun 1, 2024. Bundle of 24 courses via Kajabi.' },
+  { id: 202, title: 'The Blog Post Vault',                  platform: 'Podia (conversionminded.com)', category: 'courses', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — purchased Sep 14, 2024. By Sandra & Taughnee.' },
+  { id: 203, title: 'Course Creators Society',              platform: 'Kartra (jessa.com.au)', category: 'courses', account: 'gmail', status: 'expired', url: '', notes: 'pmrsolutionsnj — $7, purchased Mar 30, 2024. Jessa Bellman. Subscription cancelled.' },
+  { id: 204, title: 'Dashboard Design 101: Starter Essentials', platform: 'SamCart (dashboarddesign.samcart.com)', category: 'courses', account: 'gmail', status: 'active', url: 'https://dashboarddesign.samcart.com/courses/login', notes: 'pmrsolutionsnj — purchased Jul 27, 2025.' },
+  { id: 205, title: 'Client Onboarding Checklist',          platform: 'Thinkific (5MB Academy)', category: 'courses', account: 'gmail', status: 'active', url: 'https://courses.5mbacademy.com/users/sign_in', notes: 'pmrsolutionsnj — by Veronica Wasek, Apr 8, 2024. Access via Thinkific.' },
+  // PMR SOLUTIONS — MEMBERSHIPS
+  { id: 206, title: 'Certifyible Membership',               platform: 'Certifyible', category: 'memberships', account: 'gmail', status: 'pending', url: '', notes: 'pmrsolutionsnj — purchased Apr 10, 2024. Course access expiry flagged — verify current status.' },
+  { id: 207, title: 'AIPB Membership',                      platform: 'American Institute of Professional Bookkeepers', category: 'memberships', account: 'gmail', status: 'expired', url: '', notes: 'pmrsolutionsnj — membership lapsed/expired.' },
+  { id: 208, title: 'Calm — Annual Subscription',           platform: 'Calm', category: 'memberships', account: 'gmail', status: 'active', url: 'https://www.calm.com/profile/manage-subscription', notes: 'pmrsolutionsnj — $79.99/yr + tax ($85.29 total). Purchased Jul 18, 2026. Renews Jul 18, 2027.' },
+  { id: 209, title: 'Duolingo Family Plan',                 platform: 'Duolingo', category: 'memberships', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — Super/Family plan. Exact date unknown.' },
+  { id: 210, title: 'MacrosFirst Macro Tracker',            platform: 'Google Play', category: 'memberships', account: 'gmail', status: 'pending', url: '', notes: 'pmrsolutionsnj — subscription payment declined/paused on Google Play.' },
+  // PMR SOLUTIONS — TOOLS
+  { id: 211, title: 'eForms Monthly Plan',                  platform: 'eforms.com', category: 'tools', account: 'gmail', status: 'expired', url: '', notes: 'pmrsolutionsnj — $39/mo, started Apr 9, 2023. Legal document templates. Renewal failed.' },
+  { id: 212, title: 'LawDepot',                             platform: 'LawDepot', category: 'tools', account: 'gmail', status: 'expired', url: '', notes: 'pmrsolutionsnj — free trial Jan 19, 2024, then $35/mo. Renewal subsequently failed.' },
+  { id: 213, title: 'RightTool by Accounting Pro Tools',    platform: 'Stripe (qbkaccounting.com)', category: 'tools', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — monthly plan. Renewal Jul 8, 2025. Contact: hector@qbkaccounting.com.' },
+  { id: 214, title: 'Google AI Pro (Gemini Advanced)',       platform: 'Google', category: 'tools', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — subscription update noticed May 2026. Google AI Pro / Gemini Advanced.' },
+  { id: 215, title: 'ChatGPT Plus (Google Play)',             platform: 'Google Play / OpenAI', category: 'tools', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — $19.99/mo ($21.31 incl. NJ tax). Renewed Oct 21, 2026 via PayPal backup after Discover-3896 failed. Confirmed active.' },
+  { id: 216, title: 'PipelinePRO — Lifetime License',       platform: 'PipelinePRO', category: 'tools', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — lifetime sales tracking dashboard license. Purchased Jun 30, 2023.' },
+  { id: 217, title: 'TickTick',                             platform: 'TickTick', category: 'tools', account: 'gmail', status: 'pending', url: '', notes: 'pmrsolutionsnj — task manager app. Verify subscription tier (free vs premium).' },
+  { id: 218, title: 'Pocket AI Personal Assistant',         platform: 'Google Play', category: 'tools', account: 'gmail', status: 'expired', url: '', notes: 'pmrsolutionsnj — cancelled via Google Play.' },
+  { id: 219, title: 'Voicemod',                             platform: 'Google Play', category: 'tools', account: 'gmail', status: 'expired', url: '', notes: 'pmrsolutionsnj — cancelled via Google Play.' },
+  { id: 220, title: 'Bible Chat Holy Bible Study',          platform: 'Google Play', category: 'tools', account: 'gmail', status: 'expired', url: '', notes: 'pmrsolutionsnj — subscription ending on Google Play.' },
+  // PMR SOLUTIONS — EBOOKS
+  { id: 221, title: 'Google Play Book — Power of Praying for Your Adult Children', platform: 'Google Play Books', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — $7.45 incl. tax. By Stormie Omartian. Purchased Oct 26, 2026.' },
+  // PMR SOLUTIONS — ETSY/DOWNLOADS
+  { id: 222, title: 'The Canva Wizard — Purchase',          platform: 'thecanvawizard.com', category: 'etsy', account: 'gmail', status: 'active', url: 'https://thecanvawizard.com/', notes: 'pmrsolutionsnj — Canva template/design purchase. Mar 24, 2024.' },
+  // PMR SOLUTIONS — ADDITIONAL ITEMS (Round 2)
+  { id: 223, title: 'Content Calendar System',              platform: 'Podia (conversionminded.com)', category: 'courses', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — Sep 14, 2024. By Sandra & Taughnee (ConversionMinded). Separate from Blog Post Vault.' },
+  { id: 224, title: 'Freezer Meal Guide',                   platform: 'Bio Sites / Squarespace (simplysarahhart)', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — Apr 11, 2026. By Sarah Hart. Digital meal plan download.' },
+  { id: 225, title: 'LastPass Families — Annual',           platform: 'LastPass', category: 'tools', account: 'gmail', status: 'active', url: 'https://lastpass.com/', notes: 'pmrsolutionsnj — $48/yr. Purchased Mar 28, 2024. Invoice INLASAPCCO3S062862120. Password manager family plan.' },
+  { id: 226, title: 'Hyper Focus Incubator',                platform: 'Skool (HyperLinx System)', category: 'memberships', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — Nov 2, 2024. By Steve / HyperLinx. Entrepreneur productivity & coaching community on Skool.' },
+  { id: 227, title: 'QBO Diagnostic Training',              platform: 'JL Media LLC (Justine Lackey)', category: 'courses', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — May 11, 2024. QuickBooks bookkeeping diagnostic tool training.' },
+  { id: 228, title: 'Designrr',                             platform: 'PageOneTraffic Inc (ThriveCart)', category: 'tools', account: 'gmail', status: 'active', url: 'https://designrr.io/', notes: 'pmrsolutionsnj — $64 one-time (Invoice 000277168). Nov 14, 2023. eBook/PDF creation tool.' },
+  { id: 229, title: 'Shopify Store Subscription',           platform: 'Shopify', category: 'tools', account: 'gmail', status: 'pending', url: 'https://admin.shopify.com/', notes: 'pmrsolutionsnj — $39/mo, started Apr 2, 2023. PMR Solutions store. Verify if still active.' },
+  { id: 230, title: 'Social Mixt Media — Resell Bundle',   platform: 'Social Mixt Media (ThriveCart)', category: 'other', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — $109, Mar 23, 2024 (Invoice 000002973). Business & Financial Plan Template + Small Business Tracker + Digital Mockup Bundle. White Label Rights.' },
+  { id: 231, title: 'Social Mixt Media — Client Onboarding Packet', platform: 'Social Mixt Media (ThriveCart)', category: 'other', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — $20.40 (orig $34, coupon CODE40), Apr 11, 2024 (Invoice 000003171). Client Onboarding Welcome Packet Template.' },
+  { id: 232, title: 'Zadie Planner',                        platform: 'meetzadie.com', category: 'other', account: 'gmail', status: 'pending', url: 'https://meetzadie.com/', notes: 'pmrsolutionsnj — Apr 14, 2026. Productivity planner app. Verify if paid subscription or free signup.' },
+
+  // PMR SOLUTIONS — BATCH 3 (Maria Wendt, Layne Booth, Stripe, Circle)
+  { id: 233, title: 'Maria Wendt — 12 Month Business Gameplan Worksheets', platform: 'Maria Wendt / SamCart / Kajabi', category: 'courses', account: 'gmail', status: 'active', url: 'https://maria-c0c8.mykajabi.com/login', notes: 'pmrsolutionsnj — $1.00, Feb 15, 2026. SamCart order. Worksheet bundle via Kajabi.' },
+  { id: 234, title: 'Credit Hero Challenge — Digital Only',              platform: 'Credit Repair Cloud', category: 'courses', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — $47, Apr 6, 2023. Invoice #724093. Includes Basic Disputing Certification (Thinkific, activated Apr 18, 2023).' },
+  { id: 235, title: 'Print Master',                                      platform: 'Google Play', category: 'tools', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — $7.45/mo (incl. tax). Google Play subscription, active Oct 2026.' },
+  { id: 236, title: 'Workshop Replay Bundle — Extended Access',          platform: 'Layne Booth / Dashboard Design (SamCart)', category: 'courses', account: 'gmail', status: 'active', url: 'https://dashboarddesign.samcart.com/', notes: 'pmrsolutionsnj — $47, Jun 21, 2025. Same vendor as Dashboard Design 101 (ID 204).' },
+  { id: 237, title: 'Ultimate Social Media Sales Content Jumbo Pack',    platform: 'Maria Wendt / SamCart / Kajabi', category: 'courses', account: 'gmail', status: 'active', url: 'https://maria-c0c8.mykajabi.com/login', notes: 'pmrsolutionsnj — $17, Jun 9, 2024. SamCart Order #17922095. Social media content pack.' },
+  { id: 238, title: 'Millionaire Business Dashboard',                    platform: 'Maria Wendt / SamCart / Kajabi', category: 'courses', account: 'gmail', status: 'active', url: 'https://maria-c0c8.mykajabi.com/login', notes: 'pmrsolutionsnj — $97, Jun 7, 2024. SamCart Order #17912296.' },
+  { id: 239, title: 'Maria Wendt — 24 Courses For $24',                  platform: 'Maria Wendt / SamCart / Kajabi', category: 'courses', account: 'gmail', status: 'active', url: 'https://maria-c0c8.mykajabi.com/login', notes: 'pmrsolutionsnj — $24, Jun 1, 2024. SamCart Order #17858261 (paid via PayPal). Bundle of 24 mini-courses.' },
+  { id: 240, title: 'Dashboard Services Profit Pack',                    platform: 'Layne Booth / Dashboard Design (SamCart)', category: 'courses', account: 'gmail', status: 'active', url: 'https://dashboarddesign.samcart.com/', notes: 'pmrsolutionsnj — $17, Jul 27, 2025. SamCart Order #21899989.' },
+  { id: 241, title: 'Confident Consultant Proposal Template',            platform: 'Layne Booth / Dashboard Design (SamCart)', category: 'other', account: 'gmail', status: 'active', url: 'https://dashboarddesign.samcart.com/', notes: 'pmrsolutionsnj — $17 (part of Order #21899989, Jul 27, 2025, $24 total). Proposal template for consultants.' },
+  { id: 242, title: 'Scribe Pro Personal',                               platform: 'Scribe (scribehow.com)', category: 'tools', account: 'gmail', status: 'active', url: 'https://scribehow.com/', notes: 'pmrsolutionsnj — $29/mo. Receipt #2727-2020, Jul 2025. Process documentation / how-to guide creator.' },
+  { id: 243, title: 'Secret Weapon PLR',                                 platform: 'Coach Growth Company / Evelyn Weiss', category: 'memberships', account: 'gmail', status: 'active', url: 'https://www.coachgrowthhub.com/', notes: 'pmrsolutionsnj — $27/mo. Receipt #2811-7955, May 2025. PLR content subscription.' },
+  { id: 244, title: 'Business Dashboard HQ',                             platform: 'Business Performance HQ (bizpfhq.com)', category: 'courses', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — $37, Aug 12, 2023. Stripe Receipt #1189-0743. Contact: alycia@bizpfhq.com.' },
+  { id: 245, title: 'Stay-At-Home Bookkeeper eBook',                     platform: 'Stay-at-Home Bookkeeper Academy (stayathomebookkeeper.com)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://www.stayathomebookkeeper.com/', notes: 'pmrsolutionsnj — $5.90, Mar 12, 2024. Stripe Receipt #1045-8166.' },
+  { id: 246, title: 'RightTool — Monthly Plan',                          platform: 'Accounting Pro Tools LLC (accountingprotools.com)', category: 'tools', account: 'gmail', status: 'active', url: 'http://www.accountingprotools.com/', notes: 'pmrsolutionsnj — Monthly subscription. Renewal notice Jul 8, 2025. QuickBooks right-click productivity tool.' },
+  { id: 247, title: 'PipelinePRO — Lifetime License',                    platform: 'PipelinePRO (Circle / gopipelinepro.org)', category: 'tools', account: 'gmail', status: 'active', url: 'https://community.gopipelinepro.org/', notes: 'pmrsolutionsnj — Lifetime License, Jun 30, 2023. CRM/pipeline tool with private Circle community. Founded by Andrew Cass.' },
+  // PMR SOLUTIONS — BATCH 4
+  { id: 248, title: 'Claude Pro (Anthropic)',                                   platform: 'Anthropic', category: 'memberships', account: 'gmail', status: 'active', url: 'https://claude.ai/', notes: 'pmrsolutionsnj — $20/mo. Receipts: Sep 27, 2026 (#2788-4383-7008) and Oct 31, 2026 (#2319-7053-3392). Separate from any Outlook Claude Pro subscription.' },
+  { id: 249, title: 'Freezer Meals 101 — Digital Purchase',                   platform: 'Freezer Meals 101 (freezermeals101.com / Sharla Kostelyk)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://www.freezermeals101.com/', notes: 'pmrsolutionsnj — $25, Oct 31, 2026. PayPal to sharla@freezermeals101.com. Digital freezer meal plan/content.' },
+  { id: 250, title: 'Jessa Bellman — Course Creators Society',                 platform: 'Jessa Bellman (Stripe / hello@jessa.com.au)', category: 'courses', account: 'gmail', status: 'expired', url: '', notes: 'pmrsolutionsnj — $6.99/mo (or $7 per ID 203). Stripe subscription. Payment to Mastercard-3709 failed Mar 1, 2025. Likely same sub as Course Creators Society (ID 203) — subscription lapsed.' },
+  // PMR SOLUTIONS — BATCH 5
+  { id: 251, title: 'Workshop Replay Bundle — Extended Access',                        platform: 'Layne Booth (dashboarddesign.samcart.com)', category: 'courses', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — $47 (after $50 off $97), Jun 21, 2025. SamCart Order #21550551. Paid via Mastercard-9376. Support: support@laynebooth.com.' },
+  { id: 252, title: "Maria's 12 Month Business Gameplan Worksheets",                   platform: 'Maria Wendt (maria-c0c8.mykajabi.com)', category: 'courses', account: 'gmail', status: 'active', url: 'https://maria-c0c8.mykajabi.com/login', notes: 'pmrsolutionsnj — $1.00, Feb 15, 2026. SamCart Order #24184504. Paid via PayPal. Access via Kajabi. Support: access@mariawendt.com.' },
+  { id: 253, title: 'Hyper Focus Incubator — Skool',                                  platform: 'Steve Goodwin / HyperLinx System (skool.com)', category: 'memberships', account: 'gmail', status: 'expired', url: '', notes: 'pmrsolutionsnj — Skool.com community membership. Welcome from steve@hyperlinxsystem.com. Payment failures: Visa-4438 (Jan 15 & 18, 2025) and Mastercard-3709 (Jun 20, 2025). Membership lapsed.' },
+  { id: 254, title: 'The 30-Minute Declutter — Skool',                                platform: 'Skool (skool.com)', category: 'memberships', account: 'gmail', status: 'active', url: 'https://www.skool.com', notes: 'pmrsolutionsnj — Active Skool community. Weekly digests confirmed as recently as Oct 18, 2026. Kylie Morton also posts in this community.' },
+  { id: 255, title: 'The Blog Post Vault',                                             platform: 'ConversionMinded LLC (conversionminded.podia.com)', category: 'courses', account: 'gmail', status: 'active', url: 'https://conversionminded.podia.com/login', notes: 'pmrsolutionsnj — $52.25 (incl. NJ tax), Sep 14, 2024. ThriveCart Invoice #000015386. Blog post template pack hosted on Podia. Sandra & Taughnee (team@conversionminded.com).' },
+  { id: 256, title: 'Content Calendar System',                                         platform: 'ConversionMinded LLC (conversionminded.podia.com)', category: 'courses', account: 'gmail', status: 'active', url: 'https://conversionminded.podia.com/login', notes: 'pmrsolutionsnj — $52.25 (incl. NJ tax), Sep 14, 2024. ThriveCart Invoice #000015384 (same order as ID 257). Hosted on Podia.' },
+  { id: 257, title: 'Social Media Graphics Power Pack',                                platform: 'ConversionMinded LLC (conversionminded.podia.com)', category: 'courses', account: 'gmail', status: 'active', url: 'https://conversionminded.podia.com/login', notes: 'pmrsolutionsnj — $41.59 (incl. NJ tax), Sep 14, 2024. ThriveCart Invoice #000015384 (same order as ID 256). Hosted on Podia.' },
+  { id: 258, title: 'Resell Bundle — Business & Financial Plan Templates',             platform: 'Social Mixt Media (ThriveCart)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — $72 (one-time), Mar 23, 2024. ThriveCart Invoice #000002973 (same order as ID 259). Business & Financial Plan Template + Small Business Tracker in Google Sheets + White Label Rights.' },
+  { id: 259, title: 'Ultimate Digital Product Promotional Mockup Bundle',              platform: 'Social Mixt Media (ThriveCart)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — $37 (one-time), Mar 23, 2024. ThriveCart Invoice #000002973 (same order as ID 258). Mockup bundle for digital product promotion.' },
+  { id: 260, title: 'Client Onboarding Welcome Packet Template',                      platform: 'Social Mixt Media (ThriveCart)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — $20.40 (after CODE40 coupon off $34), Apr 11, 2024. ThriveCart Invoice #000003171.' },
+  { id: 261, title: 'Designrr — Lifetime / Special Offer',                            platform: 'Designrr.io / PageOneTraffic Inc (ThriveCart)', category: 'tools', account: 'gmail', status: 'active', url: 'https://designrr.io', notes: 'pmrsolutionsnj — $64 total (One-Time $27 + Content Creation upsell $37), Nov 14, 2023. ThriveCart Invoice #000277168. eBook/PDF/flipbook creation tool.' },
+  // PMR SOLUTIONS — BATCH 6
+  { id: 262, title: 'LawDepot — Monthly Subscription',                                         platform: 'LawDepot (lawdepot.com)', category: 'tools', account: 'gmail', status: 'expired', url: 'https://www.lawdepot.com/', notes: 'pmrsolutionsnj — Free trial started Jan 19, 2024 (Order #LWS011924-090103-519). Would auto-renew at $35/mo on Jan 26, 2024. Legal document templates (150+ docs). Likely cancelled or lapsed — verify.' },
+  // PMR SOLUTIONS — BATCH 7
+  { id: 263, title: 'Loom Business — Monthly Subscription',                                     platform: 'Loom, Inc. (loom.com)', category: 'tools', account: 'gmail', status: 'active', url: 'https://www.loom.com/', notes: 'pmrsolutionsnj — $18/mo. Receipt #2939-0022, Invoice #0843507B-0002, Jun 29–Jul 29, 2025. Paid via card ending -1956. Video recording & sharing tool.' },
+  { id: 264, title: 'Canva Mastery Bible',                                                       platform: 'The Canva Wizard (digital-downloads.com)', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — Paid purchase (amount not shown in email), Mar 24, 2024. Download delivered via noreply@digital-downloads.com. Canva design guide/template bundle from Kevin at The Canva Wizard Team.' },
+  { id: 265, title: 'Scope Genius — Video Training',                                            platform: 'Justine Lackey (justinelackey.com / Kajabi)', category: 'courses', account: 'gmail', status: 'active', url: 'https://justinelackey.com/', notes: 'pmrsolutionsnj — $47, May 11, 2024. Kajabi Invoice #1268. Transaction pi_3PFOiLIus6Zf1Nav1qFl4vOq. Paid via card -3709. Contact: justine@justinelackey.com.' },
+  { id: 266, title: 'Onboarding Checklist Training',                                            platform: 'Justine Lackey (justinelackey.com / Kajabi)', category: 'courses', account: 'gmail', status: 'active', url: 'https://justinelackey.com/', notes: 'pmrsolutionsnj — $9, May 11, 2024. Kajabi Invoice #1270. Transaction pi_3PFPvEIus6Zf1Nav1MaWe7yf. Paid via card -4438. Contact: justine@justinelackey.com.' },
+  // PMR SOLUTIONS — BATCH 8
+  { id: 267, title: 'eForms — Monthly Plan',                                                      platform: 'eForms (eforms.com)', category: 'memberships', account: 'gmail', status: 'expired', url: 'https://eforms.com/', notes: 'pmrsolutionsnj — $39/mo Monthly Plan for legal document templates. Order confirmations received Dec 6, 2022 and Apr 9, 2023 (two separate activations/re-signups). Likely cancelled — no emails after Apr 2023. Contact: support@eforms.com.' },
+  { id: 268, title: 'Tax & Bookkeeping All Access Pass',                                          platform: 'Certifyible.com (certifyible.com)', category: 'memberships', account: 'gmail', status: 'pending', url: 'https://certifyible.com/', notes: 'pmrsolutionsnj — $47/mo Membership. First charge Apr 10, 2024 (Receipt #2969-2259, Invoice #177AEE48-0002). Second charge May 10, 2024 (Receipt #2897-8173, Invoice #177AEE48-0003). Billing reminders Jun 7 & May 7, 2024. Card -4438. Contact: hello@certifyible.com. Tax & bookkeeping professional membership/certification platform. Status unknown after Jun 2024.' },
+  // PMR SOLUTIONS — BATCH 9
+  { id: 269, title: 'Cricut Access — Cricut Joy',                                                   platform: 'Cricut (Google Play / T-Mobile billing)', category: 'memberships', account: 'gmail', status: 'expired', url: 'https://cricut.com/', notes: 'pmrsolutionsnj — $9.99/mo subscription via Google Play, billed through T-Mobile. Receipts Sep–Dec 2022 (GPA.3346-3637-6777-95252). No renewals found after Dec 2022 — likely cancelled early 2023. Cricut design app subscription for Cricut Joy cutting machine.' },
+  { id: 270, title: 'Joyce Meyer Ebook Bundle (3 Books)',                                          platform: 'Google Play Books (Google LLC)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://play.google.com/', notes: 'pmrsolutionsnj — $14.90 total (Do It Afraid $1.99, Loving People Who Are Hard to Love $1.99, Power Words $9.99). Purchased Oct 24, 2026. Order GPB.3168-6849-5085-66045. Visa -8752. DRM-protected ebooks by Joyce Meyer (FaithWords publisher). Christian living / personal growth.' },
+  { id: 271, title: 'Zoom — Paid Subscription',                                                    platform: 'Zoom (zoom.us)', category: 'tools', account: 'gmail', status: 'pending', url: 'https://zoom.us/', notes: 'pmrsolutionsnj — Paid Zoom account. Invoice INV311156702 for $18.12 was 14 days past due as of Jul 11, 2025 (due Jun 27, 2025). Also 7-days-past-due notice (Jul 4). Account #5011743757. Payment declined warnings suggest subscription may have lapsed. Contact: billing@zoom.us.' },
+  // PMR SOLUTIONS — BATCH 10
+  { id: 272, title: 'Business Coach Connect — Lifetime Access',                                    platform: 'ProWriterPlus (prowriterplus.com / Kartra)', category: 'courses', account: 'gmail', status: 'active', url: 'https://prowriterplus.com/', notes: 'pmrsolutionsnj — $197 one-time, Aug 19, 2022. Order #9356449 (Kartra). Lifetime access to 50+ Done-For-You Business & Marketing Courses. Contact: Support@prowriterplus.com.' },
+  { id: 273, title: 'Business Coach Content Bible',                                                 platform: 'ProWriterPlus (prowriterplus.com / Kartra)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://prowriterplus.com/', notes: 'pmrsolutionsnj — $27.99 one-time, Aug 18, 2022. Order #9350926 (Kartra). "The Business Coach\'s Content Bundle" — 100+ professionally written business coaching articles + all bonuses. Contact: Support@prowriterplus.com.' },
+  { id: 274, title: 'McAfee+ Premium — Individual Unlimited Devices',                              platform: 'McAfee (mcafee.com)', category: 'tools', account: 'gmail', status: 'expired', url: 'https://home.mcafee.com/', notes: 'pmrsolutionsnj — $53.30 first term (intro price), Nov 25, 2022–Nov 25, 2023. Order #CS3152192196. Auto-renewal price $139.99/yr. Antivirus/security software subscription. Status unknown after Nov 2023 — check mcafee.com account. Contact: service.mcafee.com.' },
+  { id: 275, title: 'Practice Ignition — Professional Monthly',                                    platform: 'Practice Ignition (practiceignition.com)', category: 'tools', account: 'gmail', status: 'pending', url: 'https://practiceignition.com/', notes: 'pmrsolutionsnj — $149/mo Professional (Monthly). Invoice #162883, Dec 11, 2021–Jan 11, 2022. Receipt via help@subscriptions.practiceignition.com. Client proposal & engagement letter software. Status unknown after Jan 2022 — check account. Contact: billing@subscriptions.practiceignition.com.' },
+  { id: 276, title: 'iScanner — PDF Scanner App',                                                     platform: 'iScanner / BP Mobile LLC (Google Play)', category: 'tools', account: 'gmail', status: 'pending', url: '', notes: 'pmrsolutionsnj — $9.99/mo via Google Play. Trial started Sep 24, 2024 (Order GPA.3390-2049-6745-20450), converted to paid Oct 27, 2024 ($10.65 incl. tax). Mastercard-3709. PDF scanning/document app. Status unknown after Oct 2024 — verify in Google Play subscriptions.' },
+  // PMR SOLUTIONS — BATCH 11
+  { id: 277, title: 'Free Journal + Shadow Work Bundle',                                              platform: 'RP Founders Unity / KarmaGaia (karmagaia.com)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://karmagaia.com/', notes: 'pmrsolutionsnj — $9.95, Nov 26, 2024. PayPal Transaction #7GU396594R1534937. Paid via Mastercard-3709. Digital self-development bundle (journal + shadow work). Contact: support@karmagaia.com.' },
+  { id: 278, title: 'The 30-Minute Declutter',                                                       platform: 'Kylie Morton (kylie@kyliemorton.com / PayPal)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://kyliemorton.com/', notes: 'pmrsolutionsnj — $25.00, Aug 1, 2026. PayPal Transaction #15M99481VR8640907. Mastercard-7685. Digital product from Kylie Morton. May be related to The 30-Minute Declutter Skool community (ID 254).' },
+  { id: 279, title: 'Silence The Chaos',                                                              platform: 'Kylie Morton (kylie@kyliemorton.com / PayPal)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://kyliemorton.com/', notes: 'pmrsolutionsnj — $17.00, Aug 1, 2026. PayPal Transaction #9KT55186L0746414N. Mastercard-7685. Digital product from Kylie Morton (same day as ID 278).' },
+  { id: 280, title: 'Full Recipe Bundle — Tasty Shreds',                                             platform: 'Tasty Shreds (tastyshredsz@gmail.com / PayPal)', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — $12.99 + $0.86 tax = $13.85, Sep 13, 2026. PayPal Transaction #65J92935BL868984E. Mastercard-9376. Digital recipe bundle.' },
+  // PMR SOLUTIONS — BATCH 12
+  { id: 281, title: 'Complete Cookbook Collection — Healthy Eating Made Easy & Enjoyable', platform: 'Jalal Sam Digital Portal (jalalsamfit.com / PayPal)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://jalalsamfit.com/', notes: 'pmrsolutionsnj — $44.95 less $4.49 discount = $40.46, Apr 30, 2026. PayPal Transaction #42420297E66547827. Paid to JALAL SAM DIGITAL PORTAL EST. (jalalsam@jalalsamfit.com). Digital cookbook/healthy eating collection.' },
+  { id: 282, title: 'Freezer Meal Guide — Simply Curated LLC',                                      platform: 'Simply Curated LLC (sarah.k.cooley@gmail.com / PayPal)', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — $9.49, Apr 10, 2026. PayPal Transaction #4HT577220G5383527. Mastercard-7685. 30-page digital guide: how to get started with freezer meals (freeze, reheat, organize). Contact: sarah.k.cooley@gmail.com.' },
+  { id: 283, title: 'Liven Weekly Premium — Health & Wellness App',                                 platform: 'Liven (via Google Play)', category: 'memberships', account: 'gmail', status: 'pending', url: '', notes: 'pmrsolutionsnj — $8.52/mo via Google Play (PayPal). Receipts: Aug 19, 2024 (Visa-4315, Txn #9YK92615RM514032F) and Aug 26, 2024 (PayPal balance, Txn #74612016EX234561K). Health/wellness subscription app. Status unknown after Aug 2024 — check Google Play subscriptions.' },
+  { id: 284, title: 'Ancestry.com — Genealogy Subscription',                                       platform: 'Ancestry.com (ancestry.com)', category: 'memberships', account: 'gmail', status: 'expired', url: 'https://www.ancestry.com/', notes: 'pmrsolutionsnj — $35.18, Jan 26, 2023. PayPal eCheck Transaction #4UR376688E786320P. Paid via Santander bank (eCheck). Genealogy research subscription. Only one receipt found — status unknown after Jan 2023, check ancestry.com account.' },
+  // PMR SOLUTIONS — BATCH 13
+  { id: 285, title: 'Tax & Accounting 6-Figure Forms Library',                                       platform: 'Certifyible.com (certifyible.com)', category: 'tools', account: 'gmail', status: 'active', url: 'https://certifyible.com/', notes: 'pmrsolutionsnj — $14.99, Jun 18, 2024. Stripe Receipt #2961-8501, Invoice #177AEE48-0005. Card ending 1956. Separate one-time purchase from Certifyible (distinct from monthly membership ID 268). Digital library of tax & accounting forms.' },
+  { id: 286, title: 'Secret Weapon PLR — Monthly Subscription',                                      platform: 'Coach Growth Company Inc. (coachgrowthhub.com)', category: 'memberships', account: 'gmail', status: 'pending', url: 'https://coachgrowthhub.com/', notes: 'pmrsolutionsnj — $27.00/mo via Stripe. Invoices confirmed: A6C302DD-0001 (Jun 13, 2024), A6C302DD-0002 (Jul 13, 2024), A6C302DD-0003 (Aug 13, 2024). Card -3709. Contact: connect@evelyn-weiss.com, +1 778-322-0480. PLR (Private Label Rights) content subscription. Status unknown after Aug 2024 — check if still active.' },
+  { id: 287, title: 'Scribe Pro Personal',                                                           platform: 'Scribe (scribehow.com)', category: 'tools', account: 'gmail', status: 'active', url: 'https://scribehow.com/', notes: 'pmrsolutionsnj — $29.00/mo. Confirmed active as of Jul 28, 2025 (Invoice #AFAFA602-0011, 11th invoice). Card -1956. Support: support@scribehow.com. Scribe auto-generates step-by-step process documentation from screen recordings.' },
+  // PMR SOLUTIONS — BATCH 14
+  { id: 288, title: "Maria's 12 Month Business Gameplan Worksheets",                                    platform: 'Maria Wendt (maria-c0c8.mykajabi.com)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://maria-c0c8.mykajabi.com/login', notes: 'pmrsolutionsnj — $1.00, Feb 15, 2026. SamCart Order #24184504. PayPal (pmrsolutionsnj@gmail.com). Digital worksheet bundle — 12-month business planning. Access via Kajabi. Support: access@mariawendt.com.' },
+  { id: 289, title: 'The Millionaire Business Dashboard',                                               platform: 'Maria Wendt (maria-c0c8.mykajabi.com)', category: 'courses', account: 'gmail', status: 'active', url: 'https://maria-c0c8.mykajabi.com/login', notes: 'pmrsolutionsnj — $97.00, Jun 7, 2024. SamCart Order #17912296. Visa ending 4887. Business dashboard training/course. Access via Kajabi. Support: access@mariawendt.com.' },
+  { id: 290, title: 'The Ultimate Social Media Sales Content Jumbo Pack',                               platform: 'Maria Wendt (maria-c0c8.mykajabi.com)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://maria-c0c8.mykajabi.com/login', notes: 'pmrsolutionsnj — $17.00, Jun 9, 2024. SamCart Order #17922095. Visa ending 4438. Digital social media content pack. Access via Kajabi. Support: access@mariawendt.com.' },
+  { id: 291, title: '24 Courses For $24',                                                               platform: 'Maria Wendt (maria-c0c8.mykajabi.com)', category: 'courses', account: 'gmail', status: 'active', url: 'https://maria-c0c8.mykajabi.com/login', notes: 'pmrsolutionsnj — $24.00, Jun 1, 2024. SamCart Order #17858261. PayPal (pmrsolutionsnj@gmail.com). Bundle of 24 courses for $24 total. Access via Kajabi. Support: access@mariawendt.com.' },
+  { id: 292, title: 'Workshop Replay Bundle — Extended Access',                                        platform: 'Layne Booth (laynebooth.com / SamCart)', category: 'courses', account: 'gmail', status: 'active', url: 'https://laynebooth.com/', notes: 'pmrsolutionsnj — $47.00 (was $97, -$50 discount), Jun 21, 2025. SamCart Order #21550551. Mastercard-9376. Workshop replay bundle with extended access. Contact: support@laynebooth.com.' },
+  { id: 293, title: 'Dashboard Services Profit Pack',                                                   platform: 'Layne Booth (dashboarddesign.samcart.com)', category: 'tools', account: 'gmail', status: 'active', url: 'https://dashboarddesign.samcart.com/', notes: 'pmrsolutionsnj — $17.00 (part of Order #21899989, total $24 after $10 discount), Jul 27, 2025. PayPal (pmrsolutionsnj@gmail.com). Digital pack for dashboard services business. Contact: support@laynebooth.com. See also ID 294 (same order).' },
+  { id: 294, title: 'The Confident Consultant Proposal Template',                                      platform: 'Layne Booth (dashboarddesign.samcart.com)', category: 'tools', account: 'gmail', status: 'active', url: 'https://dashboarddesign.samcart.com/', notes: 'pmrsolutionsnj — $17.00 (part of Order #21899989, total $24 after $10 discount), Jul 27, 2025. PayPal (pmrsolutionsnj@gmail.com). Consultant proposal template. Contact: support@laynebooth.com. See also ID 293 (same order).' },
+  // PMR SOLUTIONS — BATCH 15
+  { id: 295, title: 'Hyper Focus Incubator — Skool Community',                                              platform: 'Hyper 8 Ltd / Hyperlinx System (hyperlinxsystem.com)', category: 'memberships', account: 'gmail', status: 'active', url: 'https://www.skool.com/hyper-focus-incubator/classroom', notes: 'pmrsolutionsnj — Purchase Oct 10, 2024 (Hyper 8 Ltd). Welcome email Nov 2, 2024 from steve@hyperlinxsystem.com. Access via Skool community. Entrepreneur community with weekly coaching calls, monthly masterclasses. Price in PDF receipt only (unreadable). Contact: steve@hyperlinxsystem.com.' },
+  { id: 296, title: 'Course Creators Society — Monthly Membership',                                       platform: 'Jessa Bellman (jessabellman.kartra.com)', category: 'memberships', account: 'gmail', status: 'expired', url: 'https://www.jessa.com.au/', notes: 'pmrsolutionsnj — $7.00/month via Kartra. Initial Order 14330432, Mar 30, 2024. Rebills: Order 14571850 (Apr 2024), Order 15103130 (Jul 2024). Failed payments Oct 2024. Cancelled. Login: jessa.com.au/coursecreatorslogin. Contact: hello@jessa.com.au. See also ID 297 (Template Creators Society — separate product same seller).' },
+  { id: 297, title: 'Template Creators Society',                                                              platform: 'Jessa Bellman (jessa.com.au)', category: 'courses', account: 'gmail', status: 'pending', url: 'https://www.jessa.com.au/templatecreators-login', notes: 'pmrsolutionsnj — Welcome email Apr 2, 2024 (one day after Course Creators Society). Separate product with own login at jessa.com.au/templatecreators-login. Price/receipt not found in email (may be same Kartra order or separate). Contact: hello@jessa.com.au. See also ID 296 (Course Creators Society).' },
+  { id: 298, title: 'Do It Afraid — Kindle Edition',                                                       platform: 'Google Play Books', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://play.google.com/', notes: 'pmrsolutionsnj — $1.99, Oct 24, 2026. Order GPB.3168-6849-5085-66045 (total $14.90 incl. $0.93 tax for 3 Joyce Meyer ebooks). Visa-8752. Author: Joyce Meyer. See also IDs 299-300 (same order).' },
+  { id: 299, title: 'Loving People Who Are Hard to Love — Kindle Edition',                               platform: 'Google Play Books', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://play.google.com/', notes: 'pmrsolutionsnj — $1.99, Oct 24, 2026. Order GPB.3168-6849-5085-66045 (total $14.90 incl. $0.93 tax for 3 Joyce Meyer ebooks). Visa-8752. Author: Joyce Meyer. See also IDs 298, 300 (same order).' },
+  { id: 300, title: 'Power Words — Kindle Edition',                                                       platform: 'Google Play Books', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://play.google.com/', notes: 'pmrsolutionsnj — $9.99, Oct 24, 2026. Order GPB.3168-6849-5085-66045 (total $14.90 incl. $0.93 tax for 3 Joyce Meyer ebooks). Visa-8752. Author: Joyce Meyer. See also IDs 298-299 (same order).' },
+  { id: 301, title: 'The Power of Praying for Your Adult Children Book of Prayers',                   platform: 'Google Play Books', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://play.google.com/', notes: 'pmrsolutionsnj — $7.45, Oct 26, 2026. Order GPB.3138-4517-8799-36434. Cash App Pay ($pamreina). Author: Stormie Omartian.' },
+  { id: 302, title: 'Designrr — eBook & PDF Creation Tool',                                              platform: 'Designrr (designrr.io / ThriveCart)', category: 'tools', account: 'gmail', status: 'active', url: 'https://designrr.io/', notes: 'pmrsolutionsnj — $64.00 one-time, Nov 14, 2023. ThriveCart Invoice #000277168. Mastercard-3709. Designrr Special Offer ($27) + Content Creation add-on ($37). Ebook/PDF/flipbook creation platform.' },
+  { id: 303, title: 'The Blog Post Vault',                                                              platform: 'ConversionMinded LLC (conversionminded.com / ThriveCart)', category: 'tools', account: 'gmail', status: 'active', url: 'https://conversionminded.com/', notes: 'pmrsolutionsnj — $52.25 (incl. $3.25 NJ tax), Sep 14, 2024. ThriveCart Invoice #000015386. Digital resource/template vault for blog posts. See also IDs 304-305 (same seller, same day).' },
+  { id: 304, title: 'Content Calendar System',                                                          platform: 'ConversionMinded LLC (conversionminded.com / ThriveCart)', category: 'tools', account: 'gmail', status: 'active', url: 'https://conversionminded.com/', notes: 'pmrsolutionsnj — $52.25 (incl. tax), Sep 14, 2024. ThriveCart Invoice #000015384. Content calendar planning system. See also IDs 303, 305 (same seller, same day).' },
+  { id: 305, title: 'Social Media Graphics Power Pack',                                                 platform: 'ConversionMinded LLC (conversionminded.com / ThriveCart)', category: 'tools', account: 'gmail', status: 'active', url: 'https://conversionminded.com/', notes: 'pmrsolutionsnj — $41.59 (incl. tax), Sep 14, 2024. ThriveCart Invoice #000015384 (same invoice as ID 304). Social media graphics template pack. See also IDs 303-304 (same seller, same day).' },
+  { id: 306, title: 'RESELL BUNDLE: Business & Financial Plan Template + Small Business Tracker + White Label Rights', platform: 'Social Mixt Media (socialmixedmedia.com / ThriveCart)', category: 'tools', account: 'gmail', status: 'active', url: 'https://socialmixedmedia.com/', notes: 'pmrsolutionsnj — $72.00, Mar 23, 2024. ThriveCart Invoice #000002973. White-label business templates with resell rights: business plan, financial plan, Google Sheets tracker. See also ID 307 (same invoice).' },
+  { id: 307, title: 'The Ultimate Digital Product Promotional Mockup Bundle',                          platform: 'Social Mixt Media (socialmixedmedia.com / ThriveCart)', category: 'tools', account: 'gmail', status: 'active', url: 'https://socialmixedmedia.com/', notes: 'pmrsolutionsnj — $37.00, Mar 23, 2024. ThriveCart Invoice #000002973 (same invoice as ID 306). Digital mockup bundle for product promotion. See also ID 306 (same invoice).' },
+  { id: 308, title: 'Client Onboarding Welcome Packet Template',                                       platform: 'Social Mixt Media (socialmixedmedia.com / ThriveCart)', category: 'tools', account: 'gmail', status: 'active', url: 'https://socialmixedmedia.com/', notes: 'pmrsolutionsnj — $20.40 (was $34, -40% discount with code CODE40), Apr 11, 2024. ThriveCart Invoice #000003171. Professional client onboarding packet template.' },
+  { id: 309, title: 'Calm — Annual Subscription',                                                      platform: 'Calm (calm.com)', category: 'memberships', account: 'gmail', status: 'active', url: 'https://www.calm.com/', notes: 'pmrsolutionsnj — $85.29 ($79.99 + $5.30 NJ tax), Jul 18, 2026. Renews Jul 18, 2027. Visa-8752. Meditation & sleep app annual subscription.' },
+  { id: 310, title: 'Claude Pro — Monthly Subscription',                                               platform: 'Anthropic (claude.ai)', category: 'tools', account: 'gmail', status: 'active', url: 'https://claude.ai/', notes: 'pmrsolutionsnj — $20.00/month. Card ending 8752. Most recent receipt Oct 27–Nov 27, 2026. AI assistant subscription.' },
+  { id: 311, title: 'Loom Business — Monthly Subscription',                                            platform: 'Loom (loom.com)', category: 'tools', account: 'gmail', status: 'active', url: 'https://www.loom.com/', notes: 'pmrsolutionsnj — $18.00/month. Card ending 1956. Invoice #0843507B-0002, Jun 29, 2025. Screen recording & video messaging platform.' },
+  { id: 312, title: 'Zoom — Monthly Subscription',                                                     platform: 'Zoom (zoom.us)', category: 'tools', account: 'gmail', status: 'pending', url: 'https://zoom.us/', notes: 'pmrsolutionsnj — $17.05/month. Account #5011743757. Receipt Feb 27, 2025 (plus earlier receipts back to at least 2023). Past-due notices in email — verify current status at zoom.us/billing.' },
+  { id: 313, title: 'eForms — Monthly Plan',                                                           platform: 'Electronic Forms LLC (eforms.com)', category: 'tools', account: 'gmail', status: 'pending', url: 'https://eforms.com/', notes: 'pmrsolutionsnj — $39.00/month. Mastercard-3709. Receipt Jan 8, 2023. Online legal form creator. Verify current subscription status at eforms.com/account.' },
+  { id: 314, title: 'The Complete Bundle',                                                              platform: 'The Digital Media Lab (thedigitalmedialab.co / Shopify)', category: 'tools', account: 'gmail', status: 'active', url: 'https://thedigitalmedialab.co/', notes: 'pmrsolutionsnj — €44.90 EUR, Apr 10, 2024. Shopify Order #9852-A. Visa-4438. Contact: thedigitalmedialabofficial@gmail.com. Digital media/content creation bundle.' },
+  // PMR SOLUTIONS — BATCH 16
+  { id: 315, title: 'Client Onboarding Checklist',                                                      platform: 'Veronica Wasek / 5MB Academy (5mbacademy.com / Thinkific)', category: 'courses', account: 'gmail', status: 'pending', url: 'https://5mbacademy.com/', notes: 'pmrsolutionsnj — Order ORD024104, Apr 8, 2024. Thinkific platform. Price unknown (receipt delivery failed). Veronica Wasek is a bookkeeping/accounting educator. Contact: support@5mbacademy.com.' },
+  { id: 316, title: 'Google AI Pro — Monthly Subscription',                                              platform: 'Google One (one.google.com)', category: 'tools', account: 'gmail', status: 'active', url: 'https://one.google.com/', notes: 'pmrsolutionsnj — ~$19.99/month. Subscription started Jun 10, 2025. Includes Gemini Advanced AI + Google One storage. Paid via Google account.' },
+  { id: 317, title: 'Office Tasks Planner Set',                                                          platform: 'Dayeeta Bera (Etsy / PayPal)', category: 'etsy', account: 'gmail', status: 'active', url: 'https://www.etsy.com/', notes: 'pmrsolutionsnj — $2.61 (from $10.44, -$7.83 discount), Mar 22, 2023. PayPal Transaction #3ER46558CE5695736. Visa-0861. Etsy Item #1265623148. Digital office tasks planner set by Dayeeta Bera.' },
+  { id: 318, title: 'Duolingo Family Plan',                                                              platform: 'Duolingo (duolingo.com)', category: 'memberships', account: 'gmail', status: 'active', url: 'https://www.duolingo.com/', notes: 'pmrsolutionsnj — Family Plan subscription. Welcome email Aug 29, 2026 from super-support@duolingo.com. Language learning app family subscription.' },
+  { id: 319, title: 'PipelinePRO — Lifetime License',                                                    platform: 'PipelinePRO (pipelineprodash.com / SamCart)', category: 'tools', account: 'gmail', status: 'active', url: 'https://pipelineprodash.com/', notes: 'pmrsolutionsnj — $37.00 one-time, Jun 30, 2023. SamCart Order #14973032. Mastercard-3709. Sales pipeline & CRM tool. Support: Support@GoPipelinePRO.com.' },
+  // PMR SOLUTIONS — BATCH 17
+  { id: 320, title: 'Canva Mastery Bible',                                                                   platform: 'The Canva Wizard (thecanvawizard.com / Shopify)', category: 'tools', account: 'gmail', status: 'active', url: 'https://thecanvawizard.com/', notes: 'pmrsolutionsnj — $39.00, Mar 24, 2024. Shopify Order #6027. Mastercard-3709. Comprehensive Canva design resource/guide by The Canva Wizard.' },
+  { id: 321, title: 'The Stay-at-Home Bookkeeper eBook',                                                    platform: 'Stay-at-Home Bookkeeper (stayathomebookkeeper.com / Stripe)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://stayathomebookkeeper.com/', notes: 'pmrsolutionsnj — $5.90, Mar 12, 2024. Stripe Invoice #1045-8166. Mastercard-3709. Bookkeeping guide/ebook.' },
+  { id: 322, title: 'Proof.com — Online Notarial Fee',                                                      platform: 'Proof.com / Notarize (proof.com / Stripe)', category: 'tools', account: 'gmail', status: 'active', url: 'https://www.proof.com/', notes: 'pmrsolutionsnj — $25.00, Jun 24, 2024. Stripe Invoice #1478-5190. Mastercard-3709. Digital/online notarization service fee.' },
+  { id: 323, title: '100 Tab Hyperlinked Digital Notebook',                                                 platform: 'Wittawas Pumpradit (Etsy / PayPal)', category: 'etsy', account: 'gmail', status: 'active', url: 'https://www.etsy.com/', notes: 'pmrsolutionsnj — $5.76, May 24, 2023. PayPal Txn 4X682845AX2356449. Visa-0861. Etsy Item #1042779561. iPad/GoodNotes-compatible 100-tab digital notebook by Wittawas Pumpradit.' },
+  { id: 324, title: 'Happyo Course — Monthly Subscription',                                                 platform: 'Hypnopulse UAB (hypno-pulse.com / PayPal)', category: 'courses', account: 'gmail', status: 'active', url: 'https://hypno-pulse.com/', notes: 'pmrsolutionsnj — $29.99/month (recurring). PayPal payments: Aug 18 2024 Txn 1MH81577S2563940A (Visa-4438); Sep 18 2024 Txn 9PN60431YU796640P (BofA x-3234); Oct 18 2024 Txn 1VA49406X5929540K (PayPal balance). Contact: paypalsupport@hypno-pulse.com.' },
+  { id: 325, title: 'Science and Health with Key to the Scriptures (eBook)',                               platform: 'First Church of Christ, Scientist (PayPal)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://www.christianscience.com/', notes: 'pmrsolutionsnj — $9.99, Aug 30, 2024. PayPal Txn 86D725810F508011T. PayPal balance. Digital edition of the Mary Baker Eddy text.' },
+  { id: 326, title: 'Freezer Meal Guide',                                                                   platform: 'Simply Curated LLC / Sarah K. Cooley (PayPal)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://www.etsy.com/', notes: 'pmrsolutionsnj — $9.49, Apr 10, 2026. PayPal Txn 4HT577220G5383527. Mastercard-7685. Payment to sarah.k.cooley@gmail.com = Simply Curated LLC (same seller as ID 282). 30-page freezer meal guide. Downloaded via Bio Sites / simplysarahhart link.' },
+  { id: 327, title: 'The Complete Cookbook Collection — Healthy Eating Made Easy & Enjoyable',             platform: 'Jalal Sam Digital Portal EST. (jalalsam@jalalsamfit.com / PayPal)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://jalalsamfit.com/', notes: 'pmrsolutionsnj — $40.46 (after $4.49 discount off $44.95), Apr 30, 2026. PayPal Txn 42420297E66547827. Digital cookbook collection on healthy eating.' },
+  { id: 328, title: 'Biz Sister — The Ultimate Journal Template™', platform: 'Biz Sister (bizsister.com / ThriveCart)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://bizsister.com/', notes: 'pmrsolutionsnj — $27.00, Mar 12, 2022. Mastercard-3709. Digital journal template.' },
+  { id: 329, title: 'GoDaddy Websites + Marketing Premium (pmrsolutionsnj.com)', platform: 'GoDaddy (godaddy.com / PayPal)', category: 'tools', account: 'gmail', status: 'active', url: 'https://www.godaddy.com/', notes: 'pmrsolutionsnj — $39.99/mo recurring. PayPal recurring billing. GoDaddy Websites + Marketing Premium plan for pmrsolutionsnj.com.' },
+  { id: 330, title: 'Layne Booth — Workshop Replay Bundle Extended Access', platform: 'Layne Booth (support@laynebooth.com / SamCart)', category: 'courses', account: 'gmail', status: 'active', url: 'https://laynebooth.com/', notes: 'pmrsolutionsnj — $47.00, Jun 21, 2025. MasterCard-9376. Workshop replay bundle extended access.' },
+  { id: 331, title: 'Loom Business (Monthly)', platform: 'Loom (loom.com)', category: 'tools', account: 'gmail', status: 'active', url: 'https://www.loom.com/', notes: 'pmrsolutionsnj — $18.00/mo recurring. Card ending 1956. Loom Business subscription for screen recording & video messaging.' },
+  { id: 332, title: 'Karma Gaia / RP FOUNDERS — Free Journal + Shadow Work Bundle', platform: 'Karma Gaia (karmagaia.com)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://karmagaia.com/', notes: 'pmrsolutionsnj — $9.95, Nov 26, 2024. Mastercard-3709. Digital journal + shadow work bundle.' },
+  { id: 333, title: 'Dashboard Design — Dashboard Services Profit Pack', platform: 'Layne Booth / Dashboard Design (dashboarddesign.samcart.com / PayPal)', category: 'tools', account: 'gmail', status: 'active', url: 'https://dashboarddesign.samcart.com/', notes: 'pmrsolutionsnj — $17.00, Jul 27, 2025. PayPal. Dashboard services profit pack.' },
+  { id: 334, title: 'Dashboard Design — The Confident Consultant Proposal Template', platform: 'Layne Booth / Dashboard Design (dashboarddesign.samcart.com / PayPal)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://dashboarddesign.samcart.com/', notes: 'pmrsolutionsnj — $17.00, Jul 27, 2025. PayPal. Proposal template for consultants.' },
+  { id: 335, title: 'Ancestry.com Subscription', platform: 'Ancestry.com (ancestry.com)', category: 'memberships', account: 'gmail', status: 'expired', url: 'https://www.ancestry.com/', notes: 'pmrsolutionsnj — $35.18, Nov 26, 2022. MasterCard x-9200. Annual genealogy subscription.' },
+  { id: 336, title: 'Actitech Limited — iStatistica / StepsApp', platform: 'Actitech Limited (actitech.com / PayPal)', category: 'tools', account: 'gmail', status: 'active', url: 'https://www.actitech.com/', notes: 'pmrsolutionsnj — $15.19, Sep 3, 2022. PayPal. Health/fitness stats app purchase.' },
+  { id: 337, title: 'ChatGPT Plus (OpenAI)', platform: 'OpenAI (openai.com / Google Play / PayPal)', category: 'tools', account: 'gmail', status: 'active', url: 'https://chat.openai.com/', notes: 'pmrsolutionsnj — $19.99/mo. Active subscription. AI assistant.' },
+  { id: 338, title: 'Print Master — Monthly Subscription', platform: 'Print Master (Google Play / Discover-3896)', category: 'tools', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — $6.99/mo. Active. Print Master monthly subscription via Google Play.' },
+  { id: 339, title: 'Voicemod (3-Month Subscription)', platform: 'Voicemod (voicemod.net / Google Play)', category: 'tools', account: 'gmail', status: 'expired', url: 'https://www.voicemod.net/', notes: 'pmrsolutionsnj — expired Jul 17, 2026. 3-month sub via Google Play. Voice changing/audio tool.' },
+  { id: 340, title: 'Pocket AI Personal Assistant — Pocket Pro', platform: 'Pocket / heypocket.app (Google Play)', category: 'tools', account: 'gmail', status: 'expired', url: 'https://heypocket.app/', notes: 'pmrsolutionsnj — expired Jun 14, 2026. AI personal assistant app via Google Play.' },
+  { id: 341, title: 'Google One — AI Pro 5 TB', platform: 'Google One (one.google.com / Google Play / PayPal)', category: 'tools', account: 'gmail', status: 'active', url: 'https://one.google.com/', notes: 'pmrsolutionsnj — $19.99/mo. Active. Google One AI Pro 5TB cloud storage + AI features.' },
+  { id: 342, title: 'eForms — Monthly Plan', platform: 'eForms (eforms.com)', category: 'tools', account: 'gmail', status: 'active', url: 'https://eforms.com/', notes: 'pmrsolutionsnj — $39.00/mo. eForms document creation monthly plan.' },
+  { id: 343, title: 'Goshen Accounting — QuickBooks File Review Template', platform: 'Goshen Accounting (goshenaccountingsvcs.com)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://goshenaccountingsvcs.com/', notes: 'pmrsolutionsnj — $30.00, Sep 17, 2022. Card-0861. QuickBooks file review template.' },
+  { id: 344, title: 'Goshen Accounting — Audit and Form 990 Prep Questionnaire', platform: 'Goshen Accounting (goshenaccountingsvcs.com)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://goshenaccountingsvcs.com/', notes: 'pmrsolutionsnj — $30.00, Sep 17, 2022. Card-0861. Audit and Form 990 prep questionnaire template.' },
+  { id: 345, title: 'Coach Growth Company — Secret Weapon PLR Membership', platform: 'Coach Growth Company Inc. (coachgrowthhub.com)', category: 'memberships', account: 'gmail', status: 'active', url: 'https://coachgrowthhub.com/', notes: 'pmrsolutionsnj — $27.00/mo recurring (active as of May 2025). Mastercard-3709. PLR content membership.' },
+  { id: 346, title: 'Certifyible — Tax & Bookkeeping All Access Pass', platform: 'Certifyible (certifyible.com)', category: 'memberships', account: 'gmail', status: 'active', url: 'https://certifyible.com/', notes: 'pmrsolutionsnj — $47.00/mo. First receipt Apr 10, 2024. Visa-4438. Tax & bookkeeping education membership.' },
+  { id: 347, title: 'Designrr — Special Offer (One Time Payment)', platform: 'Designrr / PageOneTraffic Inc (designrr.io / ThriveCart / Stripe)', category: 'tools', account: 'gmail', status: 'active', url: 'https://designrr.io/', notes: 'pmrsolutionsnj — $64.00 total ($27 Designrr OTP + $37 Content Creation), Nov 14, 2023. Mastercard-3709. ThriveCart Invoice #277168 / Stripe Receipt #1298-2195. Billed as Pamela Braue.' },
+  { id: 348, title: 'Calm — Annual Subscription', platform: 'Calm (calm.com)', category: 'memberships', account: 'gmail', status: 'active', url: 'https://www.calm.com/', notes: 'pmrsolutionsnj — $79.99/year. Renews Jul 2027. Meditation/mindfulness app.' },
+  { id: 349, title: 'Practice Ignition — Professional (Monthly)', platform: 'Practice Ignition (practiceignition.com)', category: 'tools', account: 'gmail', status: 'expired', url: 'https://www.ignitionapp.com/', notes: 'pmrsolutionsnj — $149.00/mo. Dec 2021. Billed as Pamela Braue. Business proposal & client engagement software.' },
+  { id: 350, title: 'LastPass Families — Annual', platform: 'LastPass (lastpass.com)', category: 'tools', account: 'gmail', status: 'active', url: 'https://www.lastpass.com/', notes: 'pmrsolutionsnj — $48.00/year. Mar 28, 2024. Password manager family plan.' },
+  { id: 351, title: 'Zoom (Account 5011743757)', platform: 'Zoom (zoom.us)', category: 'tools', account: 'gmail', status: 'active', url: 'https://zoom.us/', notes: 'pmrsolutionsnj — ~$17.05/payment. Active. Video conferencing subscription.' },
+  { id: 352, title: 'Canva Mastery Bible', platform: 'The Canva Wizard (thecanvawizard.com)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://thecanvawizard.com/', notes: 'pmrsolutionsnj — $39.00, Mar 24, 2024. Mastercard-3709. Order #6027. Comprehensive Canva guide.' },
+  { id: 353, title: 'ProWriter Plus — Business Coach Connect (Lifetime Access)', platform: 'ProWriter Plus (prowriterplus.com / Kartra)', category: 'courses', account: 'gmail', status: 'active', url: 'https://prowriterplus.com/', notes: 'pmrsolutionsnj — $197.00, Aug 19, 2022. Pamela Braue. Order #9356449. Lifetime access to Business Coach Connect.' },
+  { id: 354, title: 'Hyper Focus Incubator (Hyper 8 Ltd / Skool)', platform: 'Hyper 8 Ltd (hyperlinxsystem.com / Skool)', category: 'memberships', account: 'gmail', status: 'active', url: 'https://hyperlinxsystem.com/', notes: 'pmrsolutionsnj — price in PDF receipt only. Oct 10, 2024. Receipt REC10095.pdf. Business incubator/coaching community.' },
+  { id: 355, title: 'Blog Post Vault', platform: 'ConversionMinded LLC (conversionminded.com / ThriveCart)', category: 'courses', account: 'gmail', status: 'active', url: 'https://conversionminded.com/', notes: 'pmrsolutionsnj — $52.25 ($49.00 + $3.25 tax), Sep 14, 2024. ThriveCart Invoice #000015386. Blog post writing course/vault.' },
+  { id: 356, title: 'Veronica Wasek — Client Onboarding Checklist (5MB Academy / Thinkific)', platform: 'Veronica Wasek / 5MB Academy (veronicawasek.com / courses.5mbacademy.com)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://courses.5mbacademy.com/', notes: 'pmrsolutionsnj — welcome email Apr 8, 2024. Price unknown (no receipt found in this account). Client onboarding checklist for accountants.' },
+  { id: 357, title: 'ProWriter Plus — Business Coach Content Bible', platform: 'ProWriter Plus (prowriterplus.com / Kartra)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://prowriterplus.com/', notes: 'pmrsolutionsnj — $27.99, Aug 18, 2022. Order #9350926. 100+ professionally written business coaching articles.' },
+  { id: 358, title: 'ConversionMinded — Content Calendar System', platform: 'ConversionMinded LLC (conversionminded.com / ThriveCart)', category: 'tools', account: 'gmail', status: 'active', url: 'https://conversionminded.com/', notes: 'pmrsolutionsnj — $52.25 ($49.00 + $3.25 tax). First purchased Dec 11, 2021 (Invoice #000002799, billed as Pamela Braue); repurchased Sep 14, 2024 (Invoice #000015384). Social media content calendar system.' },
+  { id: 359, title: 'ConversionMinded — Social Media Graphics Power Pack', platform: 'ConversionMinded LLC (conversionminded.com / ThriveCart)', category: 'tools', account: 'gmail', status: 'active', url: 'https://conversionminded.com/', notes: 'pmrsolutionsnj — $41.59 ($39.00 + $2.59 tax), Sep 14, 2024. ThriveCart Invoice #000015384 (bundled with Content Calendar System, total order $93.83). Social media graphics templates.' },
+  { id: 360, title: 'Social Mixt Media — Client Onboarding Welcome Packet Template', platform: 'Social Mixt Media (ThriveCart)', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — $20.40 (after CODE40 coupon, orig. $34.00), Apr 11, 2024. ThriveCart Invoice #000003171. Billed as Pamela Braue. Client onboarding welcome packet template.' },
+  { id: 361, title: 'Social Mixt Media — Business & Financial Plan Template + Small Business Tracker (White Label)', platform: 'Social Mixt Media (ThriveCart)', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — $72.00, Mar 23, 2024. ThriveCart Invoice #000002973 (part of $109.00 order). Business & financial plan template + Google Sheets tracker with white label/resell rights.' },
+  { id: 362, title: 'Social Mixt Media — Ultimate Digital Product Promotional Mockup Bundle', platform: 'Social Mixt Media (ThriveCart)', category: 'tools', account: 'gmail', status: 'active', url: '', notes: 'pmrsolutionsnj — $37.00, Mar 23, 2024. ThriveCart Invoice #000002973 (part of $109.00 order with ID 361). Digital product promotional mockup graphics bundle.' },
+  // pamreina70@gmail.com RESCAN — ThriveCart/SamCart receipts
+  { id: 363, title: 'BusinessClass — The Payday Planner', platform: 'BusinessClass (ThriveCart)', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $27.00, May 2, 2026. ThriveCart Invoice #27. Digital planner for payday budgeting.' },
+  { id: 364, title: 'BusinessClass — Sinking Funds Sheet', platform: 'BusinessClass (ThriveCart)', category: 'tools', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $17.00, May 2, 2026. ThriveCart Invoice #27 (same order as ID 363). Digital sinking funds tracking spreadsheet.' },
+  { id: 365, title: 'Rhonda Melogy — Digital Planner Club Subscription', platform: 'Rhonda Melogy (ThriveCart)', category: 'memberships', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $10.00/mo. First payment Jul 6, 2023. Monthly digital planner membership.' },
+  { id: 366, title: 'Angelica Duncan — Proverbs 31 Woman Companion Workbook', platform: 'Angelica Duncan (ThriveCart)', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $5.00, Feb 10, 2020. ThriveCart Invoice #3475. Digital companion workbook.' },
+  { id: 367, title: 'Home Organize Tribe — AI Home Manager System', platform: 'Home Organize Tribe (SamCart)', category: 'courses', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $147.00, Aug 7, 2026. SamCart Order #25838151. AI-powered home management system course.' },
+  { id: 368, title: 'Jessa / Design Club — Sketchy Planner', platform: 'Design Club (SamCart)', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $9.00, Mar 25, 2026. SamCart Order #24577476. Digital sketchy planner download.' },
+  { id: 369, title: 'Ultimate Life Journal Bundle + Lifetime Access', platform: 'SamCart', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $31.00, Nov 17, 2024. SamCart Order #19356972. Ultimate life journal digital bundle with lifetime access.' },
+  // pamreina70@gmail.com RESCAN — Memberships & subscriptions
+  { id: 370, title: 'Paper Hearts Planner Co — The Planner Club', platform: 'Paper Hearts Planner Co (conjured.co)', category: 'memberships', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — 1-year auto-renew membership. Renewed Feb 21, 2026. Digital planner club subscription from paperheartsplannerco.com.' },
+  { id: 371, title: 'Aspect Health / Aida — AI Dietitian-Guided Grocery Plan', platform: 'Aspect Health (aida)', category: 'memberships', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — 1-Month plan, Dec 14, 2025. AI dietitian-guided grocery plan and meal planning service.' },
+  { id: 372, title: 'Freezer Meals 101 Club', platform: 'Freezer Meals 101 (freezermeals101.com)', category: 'memberships', account: 'gmail', status: 'active', url: 'https://freezermeals101.com/', notes: 'pamreina70 — monthly freezer meal plan membership. Contact: sharla@freezermeals101.com.' },
+  { id: 373, title: 'Life360 Gold Membership', platform: 'Life360', category: 'memberships', account: 'gmail', status: 'active', url: 'https://www.life360.com/', notes: 'pamreina70 — Gold membership, Mar 22, 2026. Family location and safety app premium subscription.' },
+  // pamreina70@gmail.com RESCAN — Etsy downloads
+  { id: 374, title: 'RachyTreasures (Etsy) — All-in-One Digital Planner 2026 2027 2028', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $0.98 paid (68% off $3.06). VISA-8752. Etsy Order #3922180543. 1 PDF. Part of $10.84 multi-shop cart (Dec 16, 2025).' },
+  { id: 375, title: 'MasterMakerForge (Etsy) — Tempered Execution Bundle — Daily & Weekly Disc Planner', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $11.99 paid. VISA-8752. Etsy Order #3981614780. Part of $32.37 multi-shop cart (Feb 22, 2026).' },
+  { id: 376, title: 'ClarityPlanr (Etsy) — Digital Daily Journal: Hyperlinked Notebook', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $3.00 paid. VISA-8752. Etsy Order #3922180535. Part of $10.84 multi-shop cart (Dec 16, 2025).' },
+  { id: 377, title: 'Colorheal (Etsy) — DOT ART Mandala Book 1 Digital Adult Coloring Book', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $8.45 paid. VISA-8752. Etsy Order #4013388786. 4 PDFs. Part of $19.85 multi-shop cart.' },
+  { id: 378, title: 'ADAMFLEXA0 (Etsy) — Ultimate ADHD Notion Template | Minimalist Daily Planner', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $3.71 paid (25% off $4.96). VISA-8752. Etsy Order #4015916383. 1 ZIP. Part of $19.85 multi-shop cart.' },
+  { id: 379, title: 'HiddenWonderBooks (Etsy) — Mystery Color by Number Adult Coloring Book', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $7.69 paid ($7.21 + $0.48 tax). VISA-8752. Etsy Order #4015916387. 3 PDFs. Part of $19.85 multi-shop cart.' },
+  { id: 380, title: 'ThePrintablePlans (Etsy) — Daily Review Printable, Daily Reflection Planner', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $1.39 paid. VISA-8752. Etsy Order #3984653519. 2 ZIPs. Feb 22, 2026. Part of $32.37 multi-shop cart.' },
+  { id: 381, title: 'TheBestDigitalBooks (Etsy) — Anatomy and Physiology Coloring Workbook 1', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $5.96 paid (50% off $11.18). MasterCard-3709. Etsy Order #3617647163. 1 PDF. Older purchase.' },
+  { id: 382, title: 'RachyTreasures (Etsy) — All-in-One Digital Planner 2026 2027 2028 (2nd order)', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $0.86 paid (72% off $3.06). VISA-8752. Etsy Order #3983769423. 1 PDF. Part of $16.69 multi-shop cart.' },
+  { id: 383, title: 'Digicarft (Etsy) — ADHD Cleaning Planner Bundle PDF Editable Canva', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $6.40 paid (60% off $15.99). VISA-8752. Etsy Order #3980634046. 2 ZIPs + 1 PDF. Part of $16.69 multi-shop cart.' },
+  { id: 384, title: 'MrsNeat (Etsy) — FILLABLE Daily Review Planner PRINTABLE: Minimalist', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — ~$1.36 paid (25% off $1.82). VISA-8752. Etsy Order #3984653531. 5 PDFs. Feb 22, 2026. Part of $32.37 multi-shop cart.' },
+  { id: 385, title: 'paperbien (Etsy) — Printable Master Grocery List, Rainbow Theme', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $2.82 paid. VISA-8752. Etsy Order #3983769405. 1 PDF + 1 ZIP. Part of $16.69 multi-shop cart.' },
+  { id: 386, title: 'CraftifyDigitalSol (Etsy) — 2026 Journal Collection Bundle: Habit, Mood & Reflection', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $7.98 paid (60% off $19.96). VISA-8752. Etsy Order #3981614792. 1 PDF. Feb 22, 2026. Part of $32.37 multi-shop cart.' },
+  { id: 387, title: 'PlannersAndTheLike (Etsy) — Digital Daily Journal for GoodNotes, Notability', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $1.98 paid (65% off $5.64). VISA-8752. Etsy Order #3983769415. 2 PDFs. Part of $16.69 multi-shop cart.' },
+  { id: 388, title: 'phenixdigital (Etsy) — Digital Hyperlinked Notebook Minimal Notebook', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $0.99 paid (65% off $2.82). VISA-8752. Etsy Order #3983769421. 1 PDF. Part of $16.69 multi-shop cart.' },
+  { id: 389, title: 'LiliesDaily (Etsy) — Daily Reflection Journal, Digital Daily Review', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $2.16 paid (20% off $2.70). VISA-8752. Etsy Order #3984653543. 1 ZIP. Feb 22, 2026. Part of $32.37 multi-shop cart.' },
+  { id: 390, title: 'reScrible (Etsy) — Tabbed Digital Notebook for GoodNotes, Notability', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $1.99 paid (50% off $3.98). VISA-8752. Etsy Order #3922180537. 3 ZIPs + 1 PDF. Dec 16, 2025. Part of $10.84 multi-shop cart.' },
+  { id: 391, title: 'SnazzyPixels (Etsy) — Daily Review Printable Fillable PDF, Daily Reflection', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $1.49 paid (50% off $2.99). VISA-8752. Etsy Order #3981614808. 1 ZIP. Feb 22, 2026. Part of $32.37 multi-shop cart.' },
+  { id: 392, title: 'VisioningChrisCo (Etsy) — Digital Gratitude Journal, Wellness Planner', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $6.00 paid. VISA-8752. Etsy Order #3984653509. 2 PDFs. Feb 22, 2026. Part of $32.37 multi-shop cart.' },
+  { id: 393, title: 'LandOfPrintables (Etsy) — ULTIMATE Digital Planner, GoodNotes Planner', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $13.99 paid (50% off $27.99). VISA-8752. Etsy Order #3913414198. 2 PDFs. Part of $19.98 multi-shop cart.' },
+  // PAMREINA70 RESCAN — BATCH 1
+  { id: 394, title: 'Income Digs — Quickbooks Cleanup Toolkit', platform: 'Income Digs (Kajabi)', category: 'tools', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $17.00, Jun 19, 2024. Kajabi Invoice #2100. QuickBooks cleanup toolkit for bookkeeping.' },
+  { id: 395, title: 'The 90 Day Rebrand Manuscript PDF', platform: 'Stan.store', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $12.99, Sep 14, 2026. Stan.store Receipt #1426-3406. 90-day rebranding guide in PDF format.' },
+  { id: 396, title: 'PixelShopHub — The Ultimate 2025 Journal Bundle', platform: 'PixelShopHub (Shopify)', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $5.90, Nov 24, 2024. Shopify Order #4348. Digital journal bundle for 2025.' },
+  { id: 397, title: 'PixelShopHub — Digital Note Paper', platform: 'PixelShopHub (Shopify)', category: 'tools', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $15.90, Nov 24, 2024. Shopify Order #4348 (same order as ID 396). Digital note paper templates.' },
+  { id: 398, title: 'TeachSundaySchool.com — 365 Day Bible Reading Plan', platform: 'TeachSundaySchool.com (ClickBank)', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $9.99, Dec 14, 2024. ClickBank Order #ZJ27ZJQE. Year-long Bible reading plan.' },
+  { id: 399, title: 'TeachSundaySchool.com — Bible Study Bundle', platform: 'TeachSundaySchool.com (ClickBank)', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $27.00, Dec 14, 2024. ClickBank Order #ZJ27ZNLE. Bible study bundle package.' },
+  { id: 400, title: 'TeachSundaySchool.com — Write-a-Verse-a-Day Copywork Calendar', platform: 'TeachSundaySchool.com (ClickBank)', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $7.00, Feb 9, 2026. ClickBank Order #KZS6M38E. Scripture copywork calendar.' },
+  { id: 401, title: 'TeachSundaySchool.com — Character Correction Copywork', platform: 'TeachSundaySchool.com (ClickBank)', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $7.00, Feb 9, 2026. ClickBank Order #KZS6M38E (same order as ID 400). Character development copywork resource.' },
+  { id: 402, title: 'TeachSundaySchool.com — Proverbs Bible Study', platform: 'TeachSundaySchool.com (ClickBank)', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $47.00, Sep 12, 2025. ClickBank Order #RRBXMPBE. In-depth Proverbs Bible study course/resource.' },
+  { id: 403, title: 'My Ultimate Planner — MY ULTIMATE PLANNER', platform: 'My Ultimate Planner (Shopify)', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — Price unknown. Shopify Order #1600, Dec 18, 2024. Digital planner product.' },
+  { id: 404, title: 'Bloomysh — Bible: Made Simple', platform: 'Bloomysh', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $32.95, Jul 27, 2024. Order #27739. Simplified Bible study resource.' },
+  { id: 405, title: '1 Hour Bookkeeper — Novice to Number Ninja Course', platform: '1 Hour Bookkeeper', category: 'courses', account: 'gmail', status: 'pending', url: '', notes: 'pamreina70 — Price/order unknown (support thread found, original receipt not located). Bookkeeping course for beginners.' },
+  { id: 406, title: 'PrintMagicStudioX (Etsy) — All-In-One Digital Planner 2025, 2026, 2027', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $0.53 paid (65% off). VISA-8752. Etsy Order #3912939412. Dec 16, 2025. 1 PDF + 1 other file. Part of $10.84 multi-shop cart.' },
+  { id: 407, title: 'TheLeaderToolkit (Etsy) — Leader Standard Work Template for Daily, Weekly', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $0.99 paid (50% off via THANKYOU50). VISA-8752. Etsy Order #3922689035. Dec 16, 2025. 1 PDF. Part of $19.98 multi-shop cart.' },
+  { id: 408, title: 'SerenatasJourney (Etsy) — Pantry Tracker Google Sheets – Inventory Manager', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $3.64 paid (50% off $7.27). VISA-8752. Etsy Order #3980634040. Feb 21, 2026. 1 PDF. Part of $16.69 multi-shop cart.' },
+  { id: 409, title: 'PlannersByBee (Etsy) — Office Tasks Planner Set – Office Organizer Printables Work To Do List', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $2.61 paid (75% off $10.44). Etsy Order #2832100567. Mar 22, 2023. Work planner + organizer printable set.' },
+  { id: 410, title: 'EvoPrintables (Etsy) — Digital Planners Ultimate Collection Bundle (iPad, Android, reMarkable)', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $18.87 paid (50% off $37.74). Etsy Order #3160986503. Jan 2, 2024. Goodnotes, Notability, Kindle Scribe compatible.' },
+  { id: 411, title: 'KayaPlanners (Etsy) — Digital Planner 2023, Goodnotes Planner, PORTRAIT', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $9.60 paid (20% off $12.00). Etsy Order #2840827249. Mar 30, 2023. iPad planner, Notability, Samsung Notes compatible. Part of $13.73 multi-shop cart.' },
+  { id: 412, title: 'DigitizedPlanner (Etsy) — Digital Planner 2025, Undated Bundle', platform: 'Etsy (pamreina70)', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $13.69 paid via Klarna 4 installments (50% off $27.38). Etsy Order #3620635901. Mar 5, 2025. 3 PDFs. Part of $171.24 multi-shop cart.' },
+  { id: 413, title: 'WW (WeightWatchers) — Digital Membership', platform: 'WW / WeightWatchers (ww.com)', category: 'memberships', account: 'gmail', status: 'active', url: 'https://www.ww.com/', notes: 'pamreina70 — $10.00/month, 10-month commitment plan. Started Jan 8, 2025. MasterCard ending 3709. Username: PAMELA6833. App-based weight loss program with meal plans and points tracking.' },
+  { id: 414, title: 'TeachSundaySchool.com / ptmktg — 21-Day Reset Retreat: Overcoming Anxiety', platform: 'TeachSundaySchool.com (ClickBank)', category: 'courses', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $53.31 ($50 + $3.31 tax), Feb 12, 2026. ClickBank Order #P5KRM6QE. Visa ending 2544. Individual Registration for 21-day anxiety retreat course.' },
+  { id: 415, title: 'Paper Hearts Planner Co. — Sticker Club Membership Monthly', platform: 'Paper Hearts Planner Co. (Shopify)', category: 'memberships', account: 'gmail', status: 'active', url: 'https://paperheartsplanners.com', notes: 'pamreina70 — $15.00/month. Order #46397 Feb 28 2025, Order #48933 Mar 28 2025, Order #53444 May 28 2025. MasterCard 3709. Digital sticker downloads monthly membership.' },
+  { id: 416, title: 'Plenly — The All-Inclusive Digital Planner', platform: 'Plenly (plenly.com)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://plenly.com', notes: 'pamreina70 — $4.90, Mar 18 2025. Order #1273810.' },
+  { id: 417, title: 'Plenly — The Mega Bundle 95% OFF + 9 FREE Products', platform: 'Plenly (plenly.com)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://plenly.com', notes: 'pamreina70 — $21.95, Mar 18 2025. Order #1273810. Bundle with 9 free products.' },
+  { id: 418, title: 'DigitalTreasuresDen (Etsy) — Anatomy & Physiology Bundle with Flashcards', platform: 'Etsy / DigitalTreasuresDen', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $5.42, Mar 5 2025. Etsy Order #3613479584. 1 PDF. Paid via Klarna (part of $171.24 multi-shop cart).' },
+  { id: 419, title: 'thepeachpage (Etsy) — The Anatomy Coloring Book, Fourth 4th Edition', platform: 'Etsy / thepeachpage', category: 'etsy', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $6.39 ($5.99 + $0.40 tax), Mar 5 2025. Etsy Order #3613479592. 1 PDF. Paid via Klarna.' },
+  { id: 420, title: 'makaylathomas.com — Fall 2025 Favorites Bundle', platform: 'makaylathomas.com (Shopify)', category: 'courses', account: 'gmail', status: 'active', url: 'https://makaylathomas.com', notes: 'pamreina70 — $110.00, Apr 12 2026. Digital bundle.' },
+  { id: 421, title: 'Jo and Bart — The Complete Jo and Bart Collection (eBooks)', platform: 'joandbart.com', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://joandbart.com', notes: 'pamreina70 — $39.99, Apr 5 2026. Mastercard 9834.' },
+  { id: 422, title: 'TeachSundaySchool.com — Bible Study Bundle', platform: 'TeachSundaySchool.com (ClickBank)', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $28.79 ($27.00 + $1.79 tax), Dec 14 2024. PayPal. ClickBank Order #ZJ27ZNLE. eBook.' },
+  { id: 423, title: 'TeachSundaySchool.com — 365 Day Bible Reading Plan', platform: 'TeachSundaySchool.com (ClickBank)', category: 'ebooks', account: 'gmail', status: 'active', url: '', notes: 'pamreina70 — $10.65 ($9.99 + $0.66 tax), Dec 14 2024. PayPal. ClickBank Order #ZJ27ZJQE. eBook.' },
+  { id: 424, title: 'Paper Hearts Planner Co. — Planner Club Yearly', platform: 'Paper Hearts Planner Co. (Shopify)', category: 'memberships', account: 'gmail', status: 'active', url: 'https://paperheartsplanners.com', notes: 'pamreina70 — $49.00, Feb 21 2026. Order #76147. Annual digital planner membership.' },
+  { id: 425, title: '1 Hour Bookkeeper (Busy Bee Advisors)', platform: 'busybeeadvisors.com', category: 'courses', account: 'gmail', status: 'active', url: 'https://busybeeadvisors.com', notes: 'pamreina70 — Sep 15 2024. Receipt #REC10171. PDF receipt attached. Price not shown in email body.' },
+  { id: 426, title: 'My Ultimate Planner — Digital Planner Download', platform: 'my-ultimateplanner.com (Shopify)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://my-ultimateplanner.com', notes: 'pamreina70 — Dec 18 2024. Shopify Order #1600. MY ULTIMATE PLANNER x1. Price not shown in email body. Support issue reported: hyperlinks not working.' },
+  { id: 427, title: 'PixelShopHub — The Ultimate 2025 Journal Bundle (90% OFF)', platform: 'pixelshophub.com (Shopify)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://pixelshophub.com', notes: 'pamreina70 — $5.90, Nov 24 2024. Shopify Order #4348. Digital journal bundle.' },
+  { id: 428, title: 'PixelShopHub — Digital Note Paper (90% OFF)', platform: 'pixelshophub.com (Shopify)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://pixelshophub.com', notes: 'pamreina70 — $15.90, Nov 24 2024. Shopify Order #4348. Digital note paper.' },
+  { id: 429, title: 'PixelShopHub — ExclusiveAccess.Vip® Membership', platform: 'pixelshophub.com (Shopify)', category: 'memberships', account: 'gmail', status: 'active', url: 'https://pixelshophub.com', notes: 'pamreina70 — Free tier, Nov 24 2024. Shopify Order #4348. VIP access membership included with order.' },
+  { id: 430, title: 'Always Planner — All In One Digital Planner', platform: 'alwaysplanner.com (Shopify)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://alwaysplanner.com', notes: 'pamreina70 — $1.97, Nov 17 2024. Shopify Order #4180. Visa 4438.' },
+  { id: 431, title: 'Marigold Glow — All-In-One Digital Planner 2024-2025 (Green)', platform: 'marigoldglow.com (Shopify)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://www.marigoldglow.com', notes: 'pamreina70 — $19.00, Oct 24 2024. Shopify Order #1016. Includes free Digital Stickers Black & Green. Visa 4315.' },
+  { id: 432, title: 'PlannerFlix — Finance Tracker Pro', platform: 'plannerflix.com (Shopify)', category: 'tools', account: 'gmail', status: 'active', url: 'https://plannerflix.com', notes: 'pamreina70 — $8.00 (was $10.00, BF20 discount), Mar 16 2026. Shopify Order #9578. Visa 8752.' },
+  { id: 433, title: 'PlannerFlix — Full Productivity System', platform: 'plannerflix.com (Shopify)', category: 'tools', account: 'gmail', status: 'active', url: 'https://plannerflix.com', notes: 'pamreina70 — $20.00 (was $25.00, BF20 discount), Mar 16 2026. Shopify Order #9578. Visa 8752.' },
+  { id: 434, title: 'FitCoach — Personalized Program', platform: 'fit-coach.io', category: 'memberships', account: 'gmail', status: 'expired', url: 'https://fit-coach.io', notes: 'pambraue — Intro $15.19 (Sep 3, 2022) then $30.99/month auto-renew. Merchant: Actitech Limited, Cyprus. 2 receipts (Sep & Oct 2022).' },
+  { id: 435, title: 'Lasta App — Personalized Indoor Walking Plan (28 days)', platform: 'lasta.app', category: 'memberships', account: 'gmail', status: 'expired', url: 'https://lasta.app', notes: 'pambraue — $10.12 ($9.49 + $0.63 VAT), Dec 28 2025. Intro price, auto-renewal turned off. 28-day fasting/meal plan/habit platform. Lasta Inc., Raleigh NC.' },
+  { id: 436, title: 'Abide — Bible Meditation & Prayer', platform: 'Google Play (Guideposts)', category: 'memberships', account: 'gmail', status: 'active', url: 'https://abide.com', notes: 'pambraue — $7.99/month + $0.53 tax = $8.52/month. Auto-renewing monthly via Google Play. Discover-3896. Multiple receipts Jul–Oct 2026.' },
+  { id: 437, title: 'Google One — 100 GB Storage', platform: 'Google Play', category: 'tools', account: 'gmail', status: 'active', url: 'https://one.google.com', notes: 'pambraue — $1.99/month, auto-renewing monthly via Google Play. Discover-3896.' },
+  { id: 438, title: 'The Lasting Change — eBook + App Bundle', platform: 'app.thelastingchange.com', category: 'tools', account: 'gmail', status: 'active', url: 'https://app.thelastingchange.com', notes: 'pambraue — $49.99 via PayPal, Dec 28 2025. Order #5642386. Includes personalized ebook (emailed) + habit builder app (affirmations, journaling, meditations). Login: pambraue@gmail.com.' },
+  { id: 439, title: 'PixelShopHub — ExclusiveAccess.Vip® Membership', platform: 'pixelshophub.com (Shopify)', category: 'memberships', account: 'gmail', status: 'active', url: 'https://pixelshophub.com', notes: 'pambraue — FREE (part of $21.80 Order #1516), Oct 18 2024.' },
+  { id: 440, title: 'PixelShopHub — The All-Inclusive Digital Planner', platform: 'pixelshophub.com (Shopify)', category: 'tools', account: 'gmail', status: 'active', url: 'https://pixelshophub.com', notes: 'pambraue — $5.90 (90% off), Oct 18 2024. Order #1516.' },
+  { id: 441, title: 'PixelShopHub — Digital Note Paper', platform: 'pixelshophub.com (Shopify)', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://pixelshophub.com', notes: 'pambraue — $15.90 (90% off), Oct 18 2024. Order #1516.' },
+  { id: 442, title: 'Kylie Morton — The 30-Minute Declutter', platform: 'kyliemorton.com (Skool)', category: 'courses', account: 'gmail', status: 'active', url: 'https://kyliemorton.com', notes: 'pambraue — Aug 1 2026. Step-by-step decluttering program hosted on Skool app.' },
+  { id: 443, title: 'Kylie Morton — Silence the Chaos!', platform: 'kyliemorton.com', category: 'courses', account: 'gmail', status: 'active', url: 'https://kyliemorton.com', notes: 'pambraue — Aug 1 2026. Training via private YouTube channel + worksheet.' },
+  { id: 444, title: 'Kylie Morton — Unknown Products (x2)', platform: 'kyliemorton.com', category: 'other', account: 'gmail', status: 'active', url: 'https://kyliemorton.com', notes: 'pambraue — Aug 1 2026. Two PDF receipts (REC10791.pdf, REC10792.pdf) from kylie@kyliemorton.com. Product names in PDF attachments — cannot be read automatically. Check receipts in Gmail.' },
+  { id: 445, title: 'Muscle Booster Program', platform: 'musclebooster.fitness', category: 'memberships', account: 'gmail', status: 'expired', url: 'https://musclebooster.fitness', notes: 'pambraue — Intro $15.19 (May 3 2026), then $49.95/month. Cancelled. Actitech Limited, Cyprus. App on iOS/Android.' },
+  { id: 446, title: 'Oneleaf — Premium Bi-Monthly Full Access', platform: 'oneleafhealth.com', category: 'memberships', account: 'gmail', status: 'expired', url: 'https://oneleafhealth.com', notes: 'pambraue — $24.99 (bi-monthly, 50% off $49.99). Jan 11–Mar 11 2026. Card ending 7608. Stripe invoice T4FFGQMT-0001.' },
+  { id: 447, title: 'Dwell Bible — Annual Subscription', platform: 'dwellapp.io', category: 'memberships', account: 'gmail', status: 'active', url: 'https://dwellapp.io', notes: 'pambraue — $39.99/year (33% off $59.99). Jul 2 2026–Jul 2 2027. Card ending 9181. Invoice #2232-3627.' },
+  { id: 448, title: '@wherewemattermost — Learn, Launch, Lead 5-Day Challenge', platform: 'learnlaunchleadchallenge.com (Stan)', category: 'courses', account: 'gmail', status: 'active', url: 'https://learnlaunchleadchallenge.com', notes: 'pambraue — Jun 9 2025. Via stan.store / @wherewemattermost (Quincey). Also received free ebook: 7 Steps to Build a Profitable Online Business.' },
+  { id: 449, title: '$20k Client Challenge — VIP Ticket + Bundle', platform: 'dashboarddesign.samcart.com (SamCart)', category: 'courses', account: 'gmail', status: 'active', url: 'https://dashboarddesign.samcart.com', notes: 'pambraue — $7.05 (was $47.00, saved $39.95). Apr 14 2025. SamCart Order #20876939. Mastercard 3709.' },
+  { id: 450, title: 'Science and Health with Key to the Scriptures — eBook', platform: 'christianscienceshop.org', category: 'ebooks', account: 'gmail', status: 'active', url: 'https://christianscienceshop.org', notes: 'pambraue — $9.99 via PayPal, Aug 30 2024. Christian Science Online Shop Order #54192. Immediate digital download.' },
+];
+
+let cards = [];
+let nextId = 451;
+let activeFilter = 'all';
+let editingId = null;
+
+const DATA_VERSION = '2026-11-01-v450b';
+const STORE_KEY = 'dp-board-v2';
+
+function loadData() {
+  // Skip localStorage entirely — always load fresh from embedded INITIAL_CARDS
+  cards = INITIAL_CARDS.map(c => ({...c}));
+  nextId = 451;
+}
+
+function saveData() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({ version: DATA_VERSION, cards, nextId }));
+  } catch(e) {}
+}
+
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterCards();
+}
+
+function filterCards() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  document.querySelectorAll('.card').forEach(card => {
+    const title = (card.dataset.title || '').toLowerCase();
+    const platform = (card.dataset.platform || '').toLowerCase();
+    const notes = (card.dataset.notes || '').toLowerCase();
+    const account = card.dataset.account;
+    const status = card.dataset.status;
+    const matchSearch = !q || title.includes(q) || platform.includes(q) || notes.includes(q);
+    const matchFilter = activeFilter === 'all' ||
+      (activeFilter === 'gmail' && account === 'gmail') ||
+      (activeFilter === 'outlook' && account === 'outlook') ||
+      (activeFilter === 'active' && status === 'active');
+    card.style.display = (matchSearch && matchFilter) ? 'block' : 'none';
+  });
+  updateCounts();
+}
+
+function updateCounts() {
+  const visible = document.querySelectorAll('.card:not([style*="display: none"])').length;
+  document.getElementById('total-count').textContent = cards.length;
+  COLUMNS.forEach(col => {
+    const colCards = document.querySelectorAll(`#col-${col.id} .card:not([style*="display: none"])`);
+    const countEl = document.getElementById(`count-${col.id}`);
+    if (countEl) countEl.textContent = colCards.length;
+  });
+}
+
+function renderBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  COLUMNS.forEach(col => {
+    const colCards = cards.filter(c => c.category === col.id);
+    const colEl = document.createElement('div');
+    colEl.className = 'column';
+    colEl.id = `col-${col.id}`;
+    colEl.innerHTML = `
+      <div class="col-header">
+        <span class="col-icon">${col.icon}</span>
+        <span class="col-title">${col.label}</span>
+        <span class="col-count" id="count-${col.id}">${colCards.length}</span>
+      </div>
+      ${colCards.map(c => cardHTML(c)).join('')}
+      <button class="add-card-btn" onclick="openModal(null, '${col.id}')">+ Add item</button>
+    `;
+    board.appendChild(colEl);
+  });
+  document.getElementById('total-count').textContent = cards.length;
+}
+
+function cardHTML(c) {
+  const statusClass = c.status === 'active' ? '' : 'unknown';
+  const urlAttr = c.url ? `href="${c.url}" target="_blank"` : '';
+  return `
+    <div class="card ${c.category}" 
+         data-id="${c.id}" 
+         data-title="${c.title}" 
+         data-platform="${c.platform}" 
+         data-notes="${c.notes}" 
+         data-account="${c.account}" 
+         data-status="${c.status}"
+         onclick="openModal(${c.id})">
+      <div class="card-title">${c.title}</div>
+      <div class="card-meta">${c.platform}</div>
+      <div class="card-tags">
+        <span class="tag ${c.account}">${c.account === 'gmail' ? '📧 Gmail' : '📨 Outlook'}</span>
+        <span class="tag ${c.status}">${c.status === 'active' ? '✓ Active' : c.status === 'pending' ? '⏳ Pending' : '✗ Expired'}</span>
+      </div>
+      ${c.notes ? `<div class="card-meta" style="font-size:0.68rem;color:#888;line-height:1.3">${c.notes.substring(0, 60)}${c.notes.length > 60 ? '…' : ''}</div>` : ''}
+      <div class="card-footer">
+        ${c.url ? `<a ${urlAttr} onclick="event.stopPropagation()" style="font-size:0.7rem;color:#667eea;text-decoration:none;">🔗 Open</a>` : '<span></span>'}
+        <div class="card-status-dot ${statusClass}"></div>
+      </div>
+    </div>
+  `;
+}
+
+function openModal(id, defaultCategory) {
+  editingId = id;
+  const modal = document.getElementById('modal-overlay');
+  const deleteBtn = document.getElementById('btn-delete');
+  if (id) {
+    const card = cards.find(c => c.id === id);
+    document.getElementById('modal-title').textContent = 'Edit Purchase';
+    document.getElementById('f-name').value = card.title;
+    document.getElementById('f-platform').value = card.platform;
+    document.getElementById('f-category').value = card.category;
+    document.getElementById('f-account').value = card.account;
+    document.getElementById('f-status').value = card.status;
+    document.getElementById('f-url').value = card.url || '';
+    document.getElementById('f-notes').value = card.notes || '';
+    deleteBtn.classList.remove('hidden');
+  } else {
+    document.getElementById('modal-title').textContent = 'Add Purchase';
+    document.getElementById('f-name').value = '';
+    document.getElementById('f-platform').value = '';
+    document.getElementById('f-category').value = defaultCategory || 'courses';
+    document.getElementById('f-account').value = 'gmail';
+    document.getElementById('f-status').value = 'active';
+    document.getElementById('f-url').value = '';
+    document.getElementById('f-notes').value = '';
+    deleteBtn.classList.add('hidden');
+  }
+  modal.classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  editingId = null;
+}
+
+function saveCard() {
+  const data = {
+    title: document.getElementById('f-name').value.trim(),
+    platform: document.getElementById('f-platform').value.trim(),
+    category: document.getElementById('f-category').value,
+    account: document.getElementById('f-account').value,
+    status: document.getElementById('f-status').value,
+    url: document.getElementById('f-url').value.trim(),
+    notes: document.getElementById('f-notes').value.trim(),
+  };
+  if (!data.title) { alert('Please enter a name.'); return; }
+  if (editingId) {
+    const idx = cards.findIndex(c => c.id === editingId);
+    if (idx > -1) cards[idx] = { ...cards[idx], ...data };
+  } else {
+    cards.push({ id: nextId++, ...data });
+  }
+  saveData();
+  closeModal();
+  renderBoard();
+  filterCards();
+}
+
+function deleteCard() {
+  if (!editingId) return;
+  if (!confirm('Delete this item?')) return;
+  cards = cards.filter(c => c.id !== editingId);
+  saveData();
+  closeModal();
+  renderBoard();
+  filterCards();
+}
+
+document.getElementById('modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+loadData();
+renderBoard();
+filterCards();
+</script>
+</body>
+</html>
