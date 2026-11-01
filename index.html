@@ -803,15 +803,18 @@ function renderBoard() {
   document.getElementById('total-count').textContent = cards.length;
 }
 
+function esc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 function cardHTML(c) {
   const statusClass = c.status === 'active' ? '' : 'unknown';
   const urlAttr = c.url ? `href="${c.url}" target="_blank"` : '';
   return `
     <div class="card ${c.category}" 
          data-id="${c.id}" 
-         data-title="${c.title}" 
-         data-platform="${c.platform}" 
-         data-notes="${c.notes}" 
+         data-title="${esc(c.title)}" 
+         data-platform="${esc(c.platform)}" 
+         data-notes="${esc(c.notes)}" 
          data-account="${c.account}" 
          data-status="${c.status}"
          onclick="openModal(${c.id})">
